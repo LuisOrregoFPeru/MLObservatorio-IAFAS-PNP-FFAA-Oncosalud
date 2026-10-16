@@ -27,8 +27,8 @@ MIN_M, MAX_M = fact["tiempo"].min(), fact["tiempo"].max()
 IAFAS_ORDER = fact.groupby("iafas", observed=True)["gasto"].sum().sort_values(ascending=False).index.tolist()
 
 st.markdown(
-    f"""<div class="app-header"><h1>Observatorio del Consumo por IAFAS</h1>
-<p>Instituto Nacional de Enfermedades Neoplásicas · consumo facturado a {len(IAFAS_ORDER)} IAFAS · serie mensual {mes(MIN_M)} a {mes(MAX_M)}</p></div>""",
+    f"""<div class="app-header"><h1>Observatorio del Consumo por IAFAS SaludPol, FF.AA. y Oncosalud</h1>
+<p>Instituto Nacional de Enfermedades Neoplásicas · Consumo facturado a {len(IAFAS_ORDER)} IAFAS · serie mensual {mes(MIN_M)} a {mes(MAX_M)}</p></div>""",
     unsafe_allow_html=True,
 )
 
