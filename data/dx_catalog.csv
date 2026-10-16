@@ -1,0 +1,232 @@
+cod_dx,descripcion,grupo,etiqueta
+0189,Sin descripción,Código no CIE-10 / otros,0189 · Sin descripción
+0799,Sin descripción,Código no CIE-10 / otros,0799 · Sin descripción
+1619,Sin descripción,Código no CIE-10 / otros,1619 · Sin descripción
+1749,Sin descripción,Código no CIE-10 / otros,1749 · Sin descripción
+2102,Sin descripción,Código no CIE-10 / otros,2102 · Sin descripción
+2179,Sin descripción,Código no CIE-10 / otros,2179 · Sin descripción
+2419,Sin descripción,Código no CIE-10 / otros,2419 · Sin descripción
+5286,Sin descripción,Código no CIE-10 / otros,5286 · Sin descripción
+5299,Sin descripción,Código no CIE-10 / otros,5299 · Sin descripción
+6119,Sin descripción,Código no CIE-10 / otros,6119 · Sin descripción
+7332,Sin descripción,Código no CIE-10 / otros,7332 · Sin descripción
+7999,Sin descripción,Código no CIE-10 / otros,7999 · Sin descripción
+8489,Sin descripción,Código no CIE-10 / otros,8489 · Sin descripción
+C019,"Tumor maligno de lengua, base","Cavidad oral, labio y faringe","C019 · Tumor maligno de lengua, base"
+C021,"Tumor maligno de lengua, borde","Cavidad oral, labio y faringe","C021 · Tumor maligno de lengua, borde"
+C029,Tumor maligno de lengua sai,"Cavidad oral, labio y faringe",C029 · Tumor maligno de lengua sai
+C030,Tumor maligno de encia superior,"Cavidad oral, labio y faringe",C030 · Tumor maligno de encia superior
+C031,Tumor maligno de encia inferior,"Cavidad oral, labio y faringe",C031 · Tumor maligno de encia inferior
+C039,Tumor maligno de encia sai,"Cavidad oral, labio y faringe",C039 · Tumor maligno de encia sai
+C041,"Tumor maligno de piso de la boca, parte lateral","Cavidad oral, labio y faringe","C041 · Tumor maligno de piso de la boca, parte lateral"
+C050,Tumor maligno de paladar duro,"Cavidad oral, labio y faringe",C050 · Tumor maligno de paladar duro
+C051,Tumor maligno de paladar blando,"Cavidad oral, labio y faringe",C051 · Tumor maligno de paladar blando
+C060,"Tumor maligno de boca, mucosa de mejilla, mucosa bucal","Cavidad oral, labio y faringe","C060 · Tumor maligno de boca, mucosa de mejilla, mucosa bucal"
+C062,"Tumor maligno de boca, area retromolar","Cavidad oral, labio y faringe","C062 · Tumor maligno de boca, area retromolar"
+C069,"Tumor maligno de boca, cavidad bucal, glandula salival menor, sai","Cavidad oral, labio y faringe","C069 · Tumor maligno de boca, cavidad bucal, glandula salival menor, sai"
+C079,Tumor maligno de glandula parotida,"Cavidad oral, labio y faringe",C079 · Tumor maligno de glandula parotida
+C080,"Tumor maligno de glandula submaxilar, submandibular","Cavidad oral, labio y faringe","C080 · Tumor maligno de glandula submaxilar, submandibular"
+C089,"Tumor maligno de glandula salival mayor, sai","Cavidad oral, labio y faringe","C089 · Tumor maligno de glandula salival mayor, sai"
+C090,"Tumor maligno de amigdala, fosa amigdalina","Cavidad oral, labio y faringe","C090 · Tumor maligno de amigdala, fosa amigdalina"
+C099,"Tumor maligno de amigdala, sai, faucal, palatina","Cavidad oral, labio y faringe","C099 · Tumor maligno de amigdala, sai, faucal, palatina"
+C109,"Tumor maligno de orofaringe, sai","Cavidad oral, labio y faringe","C109 · Tumor maligno de orofaringe, sai"
+C119,"Tumor maligno de nasofaringe, sai","Cavidad oral, labio y faringe","C119 · Tumor maligno de nasofaringe, sai"
+C140,"Tumor maligno de faringe, sai","Cavidad oral, labio y faringe","C140 · Tumor maligno de faringe, sai"
+C142,Tumor maligno de anillo de waldeyer,"Cavidad oral, labio y faringe",C142 · Tumor maligno de anillo de waldeyer
+C153,"Tumor maligno de esofago, tercio superior",Esófago,"C153 · Tumor maligno de esofago, tercio superior"
+C158,"Tumor maligno de esofago, sitios contiguos",Esófago,"C158 · Tumor maligno de esofago, sitios contiguos"
+C159,"Tumor maligno de esofago, sai",Esófago,"C159 · Tumor maligno de esofago, sai"
+C160,"Tumor maligno de estomago, cardias",Estómago,"C160 · Tumor maligno de estomago, cardias"
+C162,"Tumor maligno de estomago, cuerpo",Estómago,"C162 · Tumor maligno de estomago, cuerpo"
+C163,"Tumor maligno de estomago, antro pilorico, antro gastrico",Estómago,"C163 · Tumor maligno de estomago, antro pilorico, antro gastrico"
+C168,"Tumor maligno de estomago, sitios contiguos",Estómago,"C168 · Tumor maligno de estomago, sitios contiguos"
+C169,"Tumor maligno de estomago, sai",Estómago,"C169 · Tumor maligno de estomago, sai"
+C172,Tumor maligno de ileon,Intestino delgado,C172 · Tumor maligno de ileon
+C180,Tumor maligno de ciego,Colon,C180 · Tumor maligno de ciego
+C181,Tumor maligno de apendice,Colon,C181 · Tumor maligno de apendice
+C182,Tumor maligno de colon ascendente,Colon,C182 · Tumor maligno de colon ascendente
+C184,Tumor maligno de colon transverso,Colon,C184 · Tumor maligno de colon transverso
+C185,Tumor maligno de colon angulo esplenico,Colon,C185 · Tumor maligno de colon angulo esplenico
+C186,Tumor maligno de colon descendente,Colon,C186 · Tumor maligno de colon descendente
+C187,Tumor maligno de colon sigmoide,Colon,C187 · Tumor maligno de colon sigmoide
+C188,"Tumor maligno de colon, sitios contiguos",Colon,"C188 · Tumor maligno de colon, sitios contiguos"
+C189,"Tumor maligno de colon, sai",Colon,"C189 · Tumor maligno de colon, sai"
+C209,Tumor maligno de recto,Recto y ano,C209 · Tumor maligno de recto
+C210,"Tumor maligno de ano, sai",Recto y ano,"C210 · Tumor maligno de ano, sai"
+C211,"Tumor maligno de conducto anal, esfinter anal",Recto y ano,"C211 · Tumor maligno de conducto anal, esfinter anal"
+C220,"Tumor maligno de higado, carcinoma de celulas hepaticas, hepatoma",Hígado y vías biliares intrahepáticas,"C220 · Tumor maligno de higado, carcinoma de celulas hepaticas, hepatoma"
+C221,"Tumor maligno de higado, carcinoma de vias biliares intrahepaticas, colang",Hígado y vías biliares intrahepáticas,"C221 · Tumor maligno de higado, carcinoma de vias biliares intrahepaticas, colang"
+C222,"Tumor maligno de higado, hepatoblastoma",Hígado y vías biliares intrahepáticas,"C222 · Tumor maligno de higado, hepatoblastoma"
+C229,"Tumor maligno de higado, sai",Hígado y vías biliares intrahepáticas,"C229 · Tumor maligno de higado, sai"
+C239,Tumor maligno de vesicula biliar,Vesícula y vías biliares,C239 · Tumor maligno de vesicula biliar
+C240,Tumor maligno de vias biliares extrahepaticas,Vesícula y vías biliares,C240 · Tumor maligno de vias biliares extrahepaticas
+C241,"Tumor maligno de vias biliares, ampolla de vater",Vesícula y vías biliares,"C241 · Tumor maligno de vias biliares, ampolla de vater"
+C249,"Tumor maligno de vias biliares, sai",Vesícula y vías biliares,"C249 · Tumor maligno de vias biliares, sai"
+C250,"Tumor maligno de pancreas, cabeza",Páncreas,"C250 · Tumor maligno de pancreas, cabeza"
+C259,"Tumor maligno de pancreas, sai",Páncreas,"C259 · Tumor maligno de pancreas, sai"
+C269,"Tumor maligno de organos digestivos, sitios mal definidos",Otros digestivos,"C269 · Tumor maligno de organos digestivos, sitios mal definidos"
+C300,Tumor maligno de fosa nasal,Otros respiratorios y torácicos,C300 · Tumor maligno de fosa nasal
+C310,Tumor maligno de seno maxilar,Otros respiratorios y torácicos,C310 · Tumor maligno de seno maxilar
+C320,"Tumor maligno de laringe, glotis, cuerda vocal (verdadera) sai",Otros respiratorios y torácicos,"C320 · Tumor maligno de laringe, glotis, cuerda vocal (verdadera) sai"
+C329,"Tumor maligno de laringe, sai",Otros respiratorios y torácicos,"C329 · Tumor maligno de laringe, sai"
+C341,"Tumor maligno de bronquio o pulmon, lobulo superior",Pulmón y bronquios,"C341 · Tumor maligno de bronquio o pulmon, lobulo superior"
+C343,"Tumor maligno de bronquio o pulmon, lobulo inferior",Pulmón y bronquios,"C343 · Tumor maligno de bronquio o pulmon, lobulo inferior"
+C349,"Tumor maligno de bronquio o pulmon, sai",Pulmón y bronquios,"C349 · Tumor maligno de bronquio o pulmon, sai"
+C379,Tumor maligno de timo,Otros respiratorios y torácicos,C379 · Tumor maligno de timo
+C383,"Tumor maligno de mediastino, sai",Otros respiratorios y torácicos,"C383 · Tumor maligno de mediastino, sai"
+C402,Tumor maligno de huesos largos del miembro inferior,Hueso y cartílago,C402 · Tumor maligno de huesos largos del miembro inferior
+C403,Tumor maligno de huesos cortos del miembro inferior,Hueso y cartílago,C403 · Tumor maligno de huesos cortos del miembro inferior
+C411,"Tumor maligno de huesos, maxilar inferior",Hueso y cartílago,"C411 · Tumor maligno de huesos, maxilar inferior"
+C412,"Tumor maligno de huesos, columna vertebral.",Hueso y cartílago,"C412 · Tumor maligno de huesos, columna vertebral."
+C413,"Tumor maligno de huesos, costilla, esternon y clavicula",Hueso y cartílago,"C413 · Tumor maligno de huesos, costilla, esternon y clavicula"
+C414,"Tumor maligno de huesos, pelvis, sacro y coccix",Hueso y cartílago,"C414 · Tumor maligno de huesos, pelvis, sacro y coccix"
+C432,"Melanoma, de la oreja y del conducto auditivo externo.",Melanoma,"C432 · Melanoma, de la oreja y del conducto auditivo externo."
+C433,"Melanoma, otras partes y de las no especificadas",Melanoma,"C433 · Melanoma, otras partes y de las no especificadas"
+C434,"Melanoma, del cuero cabelludo y del cuello",Melanoma,"C434 · Melanoma, del cuero cabelludo y del cuello"
+C435,"Melanoma, del tronco",Melanoma,"C435 · Melanoma, del tronco"
+C436,"Melanoma, del miembro superior, incluido el hombro",Melanoma,"C436 · Melanoma, del miembro superior, incluido el hombro"
+C437,"Melanoma, del miembro inferior, incluida la cadera",Melanoma,"C437 · Melanoma, del miembro inferior, incluida la cadera"
+C439,"Melanoma, de piel, sai",Melanoma,"C439 · Melanoma, de piel, sai"
+C441,"Tumor maligno de piel del parpado,incluida la comisura palpebral",Otros tumores de piel,"C441 · Tumor maligno de piel del parpado,incluida la comisura palpebral"
+C442,Tumor maligno de piel de la oreja y del conducto auditivo externo,Otros tumores de piel,C442 · Tumor maligno de piel de la oreja y del conducto auditivo externo
+C443,Tumor maligno de piel de otras parte y de las no especificadas cara,Otros tumores de piel,C443 · Tumor maligno de piel de otras parte y de las no especificadas cara
+C444,Tumor maligno de piel del cuero cabelludo y del cuello,Otros tumores de piel,C444 · Tumor maligno de piel del cuero cabelludo y del cuello
+C445,Tumor maligno de piel del tronco,Otros tumores de piel,C445 · Tumor maligno de piel del tronco
+C446,"Tumor maligno de piel del miembro superior,incluido el hombro",Otros tumores de piel,"C446 · Tumor maligno de piel del miembro superior,incluido el hombro"
+C449,"Tumor maligno de piel, sai",Otros tumores de piel,"C449 · Tumor maligno de piel, sai"
+C460,Sarcoma de kaposi de la piel,Tejidos blandos y mesotelio,C460 · Sarcoma de kaposi de la piel
+C461,Sarcoma de kaposi del tejido blando,Tejidos blandos y mesotelio,C461 · Sarcoma de kaposi del tejido blando
+C480,Tumor maligno de retroperitoneo,Tejidos blandos y mesotelio,C480 · Tumor maligno de retroperitoneo
+C482,"Tumor maligno de peritoneo, sai",Tejidos blandos y mesotelio,"C482 · Tumor maligno de peritoneo, sai"
+C488,"Tumor maligno de peritoneo y del retroperitoneo, de sitios contiguos",Tejidos blandos y mesotelio,"C488 · Tumor maligno de peritoneo y del retroperitoneo, de sitios contiguos"
+C490,"Tumor maligno de tej.conjuntivo y tej.blando de la cabeza,cara y cuello",Tejidos blandos y mesotelio,"C490 · Tumor maligno de tej.conjuntivo y tej.blando de la cabeza,cara y cuello"
+C491,"Tumor maligno de tej.conjuntivo y tej.blando del miembro superior,incluido",Tejidos blandos y mesotelio,"C491 · Tumor maligno de tej.conjuntivo y tej.blando del miembro superior,incluido"
+C492,"Tumor maligno de tej.conjuntivo y tej.blando del miembro inferior,incluida",Tejidos blandos y mesotelio,"C492 · Tumor maligno de tej.conjuntivo y tej.blando del miembro inferior,incluida"
+C493,Tumor maligno de tej.conjuntivo y tej.blando del torax,Tejidos blandos y mesotelio,C493 · Tumor maligno de tej.conjuntivo y tej.blando del torax
+C495,Tumor maligno de tej.conjuntivo y tej.blando de la pelvis,Tejidos blandos y mesotelio,C495 · Tumor maligno de tej.conjuntivo y tej.blando de la pelvis
+C496,"Tumor maligno de tejido conjuntivo y tejido blando del tronco, sai",Tejidos blandos y mesotelio,"C496 · Tumor maligno de tejido conjuntivo y tejido blando del tronco, sai"
+C500,Tumor maligno de pezon y areola mamaria,Mama,C500 · Tumor maligno de pezon y areola mamaria
+C501,"Tumor maligno de mama, porcion central",Mama,"C501 · Tumor maligno de mama, porcion central"
+C502,"Tumor maligno de mama, cuadrante superior interno",Mama,"C502 · Tumor maligno de mama, cuadrante superior interno"
+C503,"Tumor maligno de mama, cuadrante inferior interno",Mama,"C503 · Tumor maligno de mama, cuadrante inferior interno"
+C504,"Tumor maligno de mama, cuadrante superior externo",Mama,"C504 · Tumor maligno de mama, cuadrante superior externo"
+C505,"Tumor maligno de mama, cuadrante inferior externo",Mama,"C505 · Tumor maligno de mama, cuadrante inferior externo"
+C508,"Tumor maligno de mama, sitios contiguos",Mama,"C508 · Tumor maligno de mama, sitios contiguos"
+C509,"Tumor maligno de mama, sai",Mama,"C509 · Tumor maligno de mama, sai"
+C512,"Tumor maligno de vulva, clitoris",Otros genitales femeninos,"C512 · Tumor maligno de vulva, clitoris"
+C519,"Tumor maligno de vulva, sai",Otros genitales femeninos,"C519 · Tumor maligno de vulva, sai"
+C529,Tumor maligno de vagina,Otros genitales femeninos,C529 · Tumor maligno de vagina
+C530,Tumor maligno de endocervix,Cuello uterino,C530 · Tumor maligno de endocervix
+C539,"Tumor maligno de cuello uterino, sai",Cuello uterino,"C539 · Tumor maligno de cuello uterino, sai"
+C541,Tumor maligno de endometrio,Cuerpo del útero,C541 · Tumor maligno de endometrio
+C559,"Tumor maligno de utero, sai",Cuerpo del útero,"C559 · Tumor maligno de utero, sai"
+C569,Tumor maligno de ovario,Ovario,C569 · Tumor maligno de ovario
+C589,Tumor maligno de placenta,Otros genitales femeninos,C589 · Tumor maligno de placenta
+C609,"Tumor maligno de pene, sai",Otros genitales masculinos,"C609 · Tumor maligno de pene, sai"
+C619,Tumor maligno de prostata,Próstata,C619 · Tumor maligno de prostata
+C629,"Tumor maligno de testiculo, sai",Testículo,"C629 · Tumor maligno de testiculo, sai"
+C632,Tumor maligno de escroto,Otros genitales masculinos,C632 · Tumor maligno de escroto
+C649,"Tumor maligno de riñon, excepto de la pelvis renal",Riñón y pelvis renal,"C649 · Tumor maligno de riñon, excepto de la pelvis renal"
+C659,Tumor maligno de pelvis renal,Riñón y pelvis renal,C659 · Tumor maligno de pelvis renal
+C670,Tumor maligno de trigono vesical,Vejiga,C670 · Tumor maligno de trigono vesical
+C677,Tumor maligno de uraco,Vejiga,C677 · Tumor maligno de uraco
+C679,"Tumor maligno de vejiga, sai",Vejiga,"C679 · Tumor maligno de vejiga, sai"
+C690,Tumor maligno de conjuntiva,"Ojo, encéfalo y SNC",C690 · Tumor maligno de conjuntiva
+C692,Tumor maligno de retina,"Ojo, encéfalo y SNC",C692 · Tumor maligno de retina
+C693,Tumor maligno de coroides,"Ojo, encéfalo y SNC",C693 · Tumor maligno de coroides
+C696,Tumor maligno de orbita,"Ojo, encéfalo y SNC",C696 · Tumor maligno de orbita
+C700,Tumor maligno de meninges cerebrales,"Ojo, encéfalo y SNC",C700 · Tumor maligno de meninges cerebrales
+C710,"Tumor maligno de cerebro, excepto lobulos y ventriculos","Ojo, encéfalo y SNC","C710 · Tumor maligno de cerebro, excepto lobulos y ventriculos"
+C711,Tumor maligno de lobulo frontal,"Ojo, encéfalo y SNC",C711 · Tumor maligno de lobulo frontal
+C712,Tumor maligno de lobulo temporal,"Ojo, encéfalo y SNC",C712 · Tumor maligno de lobulo temporal
+C713,Tumor maligno de lobulo parietal,"Ojo, encéfalo y SNC",C713 · Tumor maligno de lobulo parietal
+C716,Tumor maligno de cerebelo,"Ojo, encéfalo y SNC",C716 · Tumor maligno de cerebelo
+C717,Tumor maligno de pedunculo cerebral,"Ojo, encéfalo y SNC",C717 · Tumor maligno de pedunculo cerebral
+C718,"Tumor maligno de encefalo, sitios contiguos","Ojo, encéfalo y SNC","C718 · Tumor maligno de encefalo, sitios contiguos"
+C719,"Tumor maligno de encefalo, sai","Ojo, encéfalo y SNC","C719 · Tumor maligno de encefalo, sai"
+C720,Tumor maligno de medula espinal,"Ojo, encéfalo y SNC",C720 · Tumor maligno de medula espinal
+C729,"Tumor maligno de sistema nervioso central, sai","Ojo, encéfalo y SNC","C729 · Tumor maligno de sistema nervioso central, sai"
+C739,Tumor maligno de glandula tiroides,Tiroides,C739 · Tumor maligno de glandula tiroides
+C751,Tumor maligno de hipofisis,Otras glándulas endocrinas,C751 · Tumor maligno de hipofisis
+C752,Tumor maligno de conducto craneofaringeo,Otras glándulas endocrinas,C752 · Tumor maligno de conducto craneofaringeo
+C760,"Tumor maligno de cabeza, cara y cuello","Mal definidos, secundarios y sitio primario desconocido","C760 · Tumor maligno de cabeza, cara y cuello"
+C762,Tumor maligno de abdomen,"Mal definidos, secundarios y sitio primario desconocido",C762 · Tumor maligno de abdomen
+C765,Tumor maligno de miembro inferior,"Mal definidos, secundarios y sitio primario desconocido",C765 · Tumor maligno de miembro inferior
+C770,Tumor maligno de secundario ganglios linfaticos cabeza cara y cuello,"Mal definidos, secundarios y sitio primario desconocido",C770 · Tumor maligno de secundario ganglios linfaticos cabeza cara y cuello
+C809,Tumor maligno de de sitios no especificados (cancer),"Mal definidos, secundarios y sitio primario desconocido",C809 · Tumor maligno de de sitios no especificados (cancer)
+C810,Enfermedad de hodgkin con predominio linfocitico,Linfoma de Hodgkin,C810 · Enfermedad de hodgkin con predominio linfocitico
+C811,Enfermedad de hodgkin con esclerosis nodular,Linfoma de Hodgkin,C811 · Enfermedad de hodgkin con esclerosis nodular
+C817,"Enfermedad de hodgkin, otros tipos",Linfoma de Hodgkin,"C817 · Enfermedad de hodgkin, otros tipos"
+C819,"Enfermedad de hodgkin, no especificada",Linfoma de Hodgkin,"C819 · Enfermedad de hodgkin, no especificada"
+C820,"Linfoma no hodgkin de celulas pequeñas hendidas, folicular",Linfomas (no Hodgkin y otros),"C820 · Linfoma no hodgkin de celulas pequeñas hendidas, folicular"
+C821,"Linfoma no hodgkin mixto, de peque.cel.hendidas y grand.cel,",Linfomas (no Hodgkin y otros),"C821 · Linfoma no hodgkin mixto, de peque.cel.hendidas y grand.cel,"
+C827,"Linfoma no hodgkin folicular, otros tipos especificados",Linfomas (no Hodgkin y otros),"C827 · Linfoma no hodgkin folicular, otros tipos especificados"
+C829,"Linfoma no hodgkin folicular (nodular), sai",Linfomas (no Hodgkin y otros),"C829 · Linfoma no hodgkin folicular (nodular), sai"
+C831,Linfoma no hodgkin de celulas pequeñas hendidas (difuso),Linfomas (no Hodgkin y otros),C831 · Linfoma no hodgkin de celulas pequeñas hendidas (difuso)
+C833,Linfoma no hodgkin de celulas grandes (difuso),Linfomas (no Hodgkin y otros),C833 · Linfoma no hodgkin de celulas grandes (difuso)
+C838,"Linfoma no hodgkin difuso, otros tipos especificados",Linfomas (no Hodgkin y otros),"C838 · Linfoma no hodgkin difuso, otros tipos especificados"
+C839,"Linfoma no hodgkin difuso, sai",Linfomas (no Hodgkin y otros),"C839 · Linfoma no hodgkin difuso, sai"
+C840,Micosis fungoide,Linfomas (no Hodgkin y otros),C840 · Micosis fungoide
+C841,Enfermedad de sezary,Linfomas (no Hodgkin y otros),C841 · Enfermedad de sezary
+C844,Linfoma de celulas t periferico,Linfomas (no Hodgkin y otros),C844 · Linfoma de celulas t periferico
+C845,"Linfoma de celulas t y los no especificados, otros",Linfomas (no Hodgkin y otros),"C845 · Linfoma de celulas t y los no especificados, otros"
+C859,"Linfoma no hodgkin, sai",Linfomas (no Hodgkin y otros),"C859 · Linfoma no hodgkin, sai"
+C900,Mieloma multiple,Mieloma y neoplasias inmunoproliferativas,C900 · Mieloma multiple
+C901,Leucemia de celulas plasmaticas,Mieloma y neoplasias inmunoproliferativas,C901 · Leucemia de celulas plasmaticas
+C902,Plasmocitoma extramedular,Mieloma y neoplasias inmunoproliferativas,C902 · Plasmocitoma extramedular
+C910,Leucemia linfoblastica aguda,Leucemia linfoide,C910 · Leucemia linfoblastica aguda
+C911,Leucemia linfocitica cronica,Leucemia linfoide,C911 · Leucemia linfocitica cronica
+C915,Leucemia de celulas t adultas,Leucemia linfoide,C915 · Leucemia de celulas t adultas
+C920,Leucemia mieloide aguda,Leucemia mieloide,C920 · Leucemia mieloide aguda
+C921,Leucemia mieloide cronica,Leucemia mieloide,C921 · Leucemia mieloide cronica
+C924,Leucemia promielocitica aguda,Leucemia mieloide,C924 · Leucemia promielocitica aguda
+C925,Leucemia mielomonocitica aguda,Leucemia mieloide,C925 · Leucemia mielomonocitica aguda
+C927,"Leucemias mieloides, otras",Leucemia mieloide,"C927 · Leucemias mieloides, otras"
+C930,Leucemia monocitica aguda,Otras leucemias,C930 · Leucemia monocitica aguda
+C950,"Leucemia aguda,celulas de tipo no especificado",Otras leucemias,"C950 · Leucemia aguda,celulas de tipo no especificado"
+C959,"Leucemia, sai",Otras leucemias,"C959 · Leucemia, sai"
+C961,Histiocitosis maligna,Otros linfoides y hematopoyéticos,C961 · Histiocitosis maligna
+C979,Tumor maligno de primario de sitios multiples independientes,"Mal definidos, secundarios y sitio primario desconocido",C979 · Tumor maligno de primario de sitios multiples independientes
+D022,Ca in situ bronquio y del pulmon,Carcinoma in situ,D022 · Ca in situ bronquio y del pulmon
+D035,Melanoma in situ tronco,Carcinoma in situ,D035 · Melanoma in situ tronco
+D037,"Melanoma in situ miembro inferior, incluida la cadera",Carcinoma in situ,"D037 · Melanoma in situ miembro inferior, incluida la cadera"
+D038,"Melanoma in situ, otros sitios",Carcinoma in situ,"D038 · Melanoma in situ, otros sitios"
+D039,"Melanoma in situ, sai",Carcinoma in situ,"D039 · Melanoma in situ, sai"
+D059,"Ca in situ de la mama, sai",Carcinoma in situ,"D059 · Ca in situ de la mama, sai"
+D069,"Ca in situ cuello del utero, sai",Carcinoma in situ,"D069 · Ca in situ cuello del utero, sai"
+D075,Ca in situ prostata,Carcinoma in situ,D075 · Ca in situ prostata
+D092,Ca in situ del ojo,Carcinoma in situ,D092 · Ca in situ del ojo
+D117,"Tb glandulas salivales mayores, otras especificadas",Tumores benignos,"D117 · Tb glandulas salivales mayores, otras especificadas"
+D126,"Tb colon, sai",Tumores benignos,"D126 · Tb colon, sai"
+D140,"Tb oido medio, de la cavidad nasal y de los senos paranasale",Tumores benignos,"D140 · Tb oido medio, de la cavidad nasal y de los senos paranasale"
+D160,Tb omoplato y huesos largos del miembro superior,Tumores benignos,D160 · Tb omoplato y huesos largos del miembro superior
+D162,Tb huesos largos del miembro inferior,Tumores benignos,D162 · Tb huesos largos del miembro inferior
+D172,Tb lipomatoso de piel y tejido subcutaneo de miembros,Tumores benignos,D172 · Tb lipomatoso de piel y tejido subcutaneo de miembros
+D200,Tb del retroperitoneo,Tumores benignos,D200 · Tb del retroperitoneo
+D212,Tb tejido conjuntivo y de otros tejidos blandos del miembro,Tumores benignos,D212 · Tb tejido conjuntivo y de otros tejidos blandos del miembro
+D223,Nevo melanocitico de otras partes y de las no especificadas,Tumores benignos,D223 · Nevo melanocitico de otras partes y de las no especificadas
+D231,"Tb piel del parpado, incluida la comisura palpebral",Tumores benignos,"D231 · Tb piel del parpado, incluida la comisura palpebral"
+D236,"Tb piel del miembro superior, incluido el hombro",Tumores benignos,"D236 · Tb piel del miembro superior, incluido el hombro"
+D249,Tb mama,Tumores benignos,D249 · Tb mama
+D279,Tb ovario,Tumores benignos,D279 · Tb ovario
+D291,Tb prostata,Tumores benignos,D291 · Tb prostata
+D300,Tb riñon,Tumores benignos,D300 · Tb riñon
+D310,Tb conjuntiva,Tumores benignos,D310 · Tb conjuntiva
+D319,"Tb ojo, parte no especificada",Tumores benignos,"D319 · Tb ojo, parte no especificada"
+D329,"Tb meninges, sai",Tumores benignos,"D329 · Tb meninges, sai"
+D339,"Tb sistema nervioso central, sai",Tumores benignos,"D339 · Tb sistema nervioso central, sai"
+D349,Tb glandula tiroides,Tumores benignos,D349 · Tb glandula tiroides
+D350,Tb glandula suprarrenal,Tumores benignos,D350 · Tb glandula suprarrenal
+D36,Tb otros sitios y de los no especificados,Tumores benignos,D36 · Tb otros sitios y de los no especificados
+D381,"Tci traquea, de los bronquios y del pulmon",Tumores de comportamiento incierto,"D381 · Tci traquea, de los bronquios y del pulmon"
+D391,Tci ovario,Tumores de comportamiento incierto,D391 · Tci ovario
+D441,Tci glandula suprarrenal,Tumores de comportamiento incierto,D441 · Tci glandula suprarrenal
+D460,"Anemia refractaria sin sideroblastos, asi descrita",Tumores de comportamiento incierto,"D460 · Anemia refractaria sin sideroblastos, asi descrita"
+D464,"Anemia refractaria, sin otra especificacon",Tumores de comportamiento incierto,"D464 · Anemia refractaria, sin otra especificacon"
+D479,"Tci tej.linfatico, de los org.hematopoyeticos y de tej.afine",Tumores de comportamiento incierto,"D479 · Tci tej.linfatico, de los org.hematopoyeticos y de tej.afine"
+D480,Tci hueso y cartilago articular,Tumores de comportamiento incierto,D480 · Tci hueso y cartilago articular
+D481,Tci tejido conjuntivo y otro tejido blando,Tumores de comportamiento incierto,D481 · Tci tejido conjuntivo y otro tejido blando
+D486,Tci la mama,Tumores de comportamiento incierto,D486 · Tci la mama
+D487,Tci otros sitios especificados,Tumores de comportamiento incierto,D487 · Tci otros sitios especificados
+D489,"Tci sitio no especificado, sai",Tumores de comportamiento incierto,"D489 · Tci sitio no especificado, sai"
+SD,Sin diagnóstico registrado,Sin diagnóstico registrado,SD · Sin diagnóstico registrado
