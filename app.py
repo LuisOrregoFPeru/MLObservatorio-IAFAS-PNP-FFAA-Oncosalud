@@ -324,8 +324,8 @@ _T_ES = "Observatorio de Consumo de IAFAS SaludPol, FF.AA. y Oncosalud"
 _T_EN = "IAFAS Consumption Observatory: SaludPol, Armed Forces and Oncosalud"
 st.divider()
 st.markdown(
-    """<p class="source-note" style="text-align:center; margin-top:0.6rem;">© Luis A. Orrego Ferreyros, DDS, Econ.,
-MCE, MMD, PhD(c), CQRM · Epidemiólogo y Economista de la Salud — INEN</p>""",
+    """<p class="source-note" style="text-align:center; margin-top:0.6rem;">© Luis A. Orrego Ferreyros, Econ.,
+MCE, MMD, PhD(c), CQRM · Epidemiólogo y Economista de la Salud · INEN</p>""",
     unsafe_allow_html=True,
 )
 st.markdown(
