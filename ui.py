@@ -86,6 +86,22 @@ def num(v, dec: int = 0) -> str:
     return f"{v:,.{dec}f}".replace(",", "\x00").replace(".", ",").replace("\x00", NBSP)
 
 
+def pval(p, tabla: bool = False) -> str:
+    """Valor p con tres decimales; si redondea a 0,000 se muestra como «< 0,001».
+    En texto devuelve el punto decimal (la capa de localización lo convierte a coma); en tablas, ya con coma."""
+    if p is None or (isinstance(p, float) and np.isnan(p)):
+        return "—"
+    if p < 0.0005:
+        return "< 0,001" if tabla else "< 0.001"
+    return num(p, 3) if tabla else f"{p:.3f}"
+
+
+def ptxt(p) -> str:
+    """Para frases: «p = 0,071» o «p < 0,001»."""
+    s = pval(p)
+    return f"p {s}" if s.startswith("<") else f"p = {s}"
+
+
 _RX_NUM = re.compile(r"(?<![\w.,])\d{1,3}(?:,\d{3})+(?:\.\d+)?(?![\w,])|(?<![\w.,])\d+\.\d+(?![\w]|\.\d)")
 
 

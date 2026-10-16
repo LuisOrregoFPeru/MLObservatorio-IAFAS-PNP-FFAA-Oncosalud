@@ -13,10 +13,10 @@ from data_processing import (
 )
 from stats_analysis import (
     smooth_series, abc_classification, cagr, chow_test_event, detect_breakpoint_auto, linear_trend, mann_kendall_trend,
-    project_series, significance_label,
+    project_series, significance_label, apc_loglinear,
 )
 from ui import (
-    STRETCH, BAD, MACRO_COLOR, OK, PALETTE, PRIMARY, SECONDARY, TIPO_COLOR, WARN, Opts, fmt_df, hex_to_rgba, interp, mes, num, pct,
+    STRETCH, BAD, MACRO_COLOR, OK, PALETTE, PRIMARY, SECONDARY, TIPO_COLOR, WARN, Opts, fmt_df, hex_to_rgba, interp, mes, num, pct, pval, ptxt,
     shades_of, soles, soles_short, style_fig, time_figure, warn,
 )
 
@@ -1124,7 +1124,7 @@ def panel_ambito(d: pd.DataFrame, name: str, idx: pd.DatetimeIndex, o: Opts) -> 
         fig = go.Figure(go.Bar(y=[str(x)[:60] for x in tg_["grupo_tarifario"]][::-1], x=tg_["gasto"][::-1], orientation="h",
                                marker_color=[amb_col.get(str(a), "#999") for a in tg_["ambito"]][::-1],
                                text=[f"{soles_short(v)} ({q:,.1f}%)" for v, q in zip(tg_["gasto"][::-1], tg_["pct"][::-1])],
-                               textposition="outside", cliponaxis=False,
+                               textposition="outside", cliponaxis=False, showlegend=False,
                                customdata=tg_["ambito"][::-1], hovertemplate="%{y}<br>S/ %{x:,.0f}<br>Ámbito: %{customdata}<extra></extra>"))
         for a_ in dict.fromkeys(str(x) for x in tg_["ambito"]):
             fig.add_trace(go.Bar(x=[None], y=[None], name=a_, marker_color=amb_col.get(a_, "#999"), showlegend=True))
@@ -1286,9 +1286,9 @@ def _mk_row(label: str, s: pd.Series, alpha: float) -> dict | None:
     mk = mann_kendall_trend(s.values, alpha)
     if mk is None:
         return None
-    media = s.mean()
+    ap = apc_loglinear(s.values)
     return {"Serie": label, "Meses": len(s), "Tendencia": mk.trend, "p": mk.p_value, "Sen (S//mes)": mk.sen_slope,
-            "Sen anual (% de la media)": mk.sen_slope * 12 / media * 100 if media else np.nan, "Variante": mk.variant_used}
+            "APC (% anual)": ap.apc if ap else np.nan, "IC 95% del APC": (f"{num(ap.lo, 1)}% a {num(ap.hi, 1)}%" if ap else "—"), "Variante": mk.variant_used}
 
 
 def panel_tendencias(d: pd.DataFrame, name: str, idx: pd.DatetimeIndex, o: Opts) -> None:
@@ -1314,24 +1314,31 @@ def panel_tendencias(d: pd.DataFrame, name: str, idx: pd.DatetimeIndex, o: Opts)
     _ya = series_metric(d, metric, "YS", idx)
     _yrs = [y for y in complete_years(idx) if not (excl_covid and y == 2020)]
     _ya = _ya[_ya.index.year.isin(_yrs)]
-    _cg = cagr(float(_ya.iloc[0]), float(_ya.iloc[-1]), int(_ya.index.year[-1] - _ya.index.year[0])) if len(_ya) >= 2 else None
-    k[4].metric("CAGR (años completos)", pct(_cg * 100) if _cg is not None else "n/d",
-                help="Crecimiento anual compuesto entre el primer y el último año completo: (último / primero)^(1/años) − 1. Solo usa los dos extremos, a diferencia del cambio anual implícito, que usa toda la serie mensual.")
+    _cg = cagr(float(_ya.iloc[0]), float(_ya.iloc[-1]), int(_ya.index.year[-1] - _ya.index.year[0])) if len(_ya) >= 2 and float(_ya.iloc[-1]) > 0 else None
+    ap = apc_loglinear(s.values)
     if mk:
         icon = {"creciente": "📈", "decreciente": "📉"}.get(mk.trend, "➖")
         k[0].metric("Mann-Kendall", f"{icon} {mk.trend}")
-        k[1].metric("p-valor", f"{mk.p_value:.3f}", significance_label(mk.p_value, o.alpha), delta_color="off")
+        k[1].metric("p-valor", pval(mk.p_value), significance_label(mk.p_value, o.alpha), delta_color="off")
         k[2].metric("Pendiente de Sen", (soles_short(mk.sen_slope) if metric_money(metric) else f"{mk.sen_slope:,.2f}") + " /mes")
-        mean_ = s.mean()
-        k[3].metric("Cambio anual implícito", pct(mk.sen_slope * 12 / mean_ * 100 if mean_ else None), help="Pendiente de Sen × 12 sobre la media de la serie. Es un cambio lineal sobre el nivel medio; no equivale al crecimiento anual compuesto (CAGR) de la pestaña Gasto, que compara solo el primer y el último año completos.")
+    k[3].metric("CAGR (años completos)", pct(_cg * 100) if _cg is not None else "n/d",
+                help="Crecimiento anual compuesto entre el primer y el último año completo: (último / primero)^(1/años) − 1. Solo usa los dos extremos de la serie anual.")
+    k[4].metric("APC (regresión log-lineal)", pct(ap.apc) if ap else "n/d",
+                help="Cambio porcentual anual estimado con ln(y) = a + b·t, como en Joinpoint: APC = (e^b − 1)·100. Usa todos los meses con valor mayor que cero."
+                     + (f" IC 95%: {pct(ap.lo)} a {pct(ap.hi)}; {ptxt(ap.p_value)}." if ap else ""))
+    if ap and ap.n_excluded:
+        st.caption(f"El APC usa {ap.n} meses; se excluyen {ap.n_excluded} con valor cero porque no tienen logaritmo.")
 
     if mk:
         txt = (f"La serie de <b>{metr_lbl.lower()}</b> de {name} muestra tendencia <b>{mk.trend}</b> "
-               f"(Mann-Kendall {mk.variant_used}, p = {mk.p_value:.3f}; {significance_label(mk.p_value, o.alpha).lower()} con α = {o.alpha}). ")
+               f"(Mann-Kendall {mk.variant_used}, {ptxt(mk.p_value)}; {significance_label(mk.p_value, o.alpha).lower()} con α = {o.alpha}). ")
         if (s == 0).mean() > 0.2 and metric in ("gasto", "lineas", "pacientes"):
             txt += "Ojo: más del 20% de los meses son cero, lo que debilita el test. "
         txt += ("El p-valor es la probabilidad de ver una tendencia así si la serie no tuviera ninguna; por debajo de α se considera tendencia real. "
-                "La pendiente de Sen es el cambio mensual típico, poco sensible a meses extremos.")
+                "La pendiente de Sen es el cambio mensual típico, poco sensible a meses extremos. ")
+        if ap:
+            txt += (f"El APC (regresión log-lineal) es de {pct(ap.apc)} al año (IC 95%: {pct(ap.lo)} a {pct(ap.hi)}; {ptxt(ap.p_value)}): "
+                    "cambio porcentual anual compuesto que se ajusta a todos los meses, no solo a los años extremos como el CAGR.")
         st.markdown(interp(txt), unsafe_allow_html=True)
 
     # gráfico con tendencia
@@ -1371,7 +1378,7 @@ def panel_tendencias(d: pd.DataFrame, name: str, idx: pd.DatetimeIndex, o: Opts)
             style_fig(fig, 320)
             fig.update_layout(hovermode="closest")
             st.plotly_chart(fig, **STRETCH)
-            st.caption(f"Pendiente: {lt.slope:,.1f} por año · R² = {lt.r2:.2f} · p = {lt.p_value:.3f} ({significance_label(lt.p_value, o.alpha).lower()}). "
+            st.caption(f"Pendiente: {lt.slope:,.1f} por año · R² = {lt.r2:.2f} · {ptxt(lt.p_value)} ({significance_label(lt.p_value, o.alpha).lower()}). "
                        f"Con {len(ya)} puntos, es una guía y no una prueba.")
             st.markdown(interp(f"Ajusta una recta a los totales anuales de años completos: el gasto {'sube' if lt.slope > 0 else 'baja'} en promedio <b>{soles_short(abs(lt.slope)) if metric_money(metric) else f'{abs(lt.slope):,.1f}'}</b> por año. "
                                "El R² indica qué parte de la variación anual explica la recta (cerca de 1, casi toda)."), unsafe_allow_html=True)
@@ -1407,7 +1414,7 @@ def panel_tendencias(d: pd.DataFrame, name: str, idx: pd.DatetimeIndex, o: Opts)
             fig.add_trace(go.Scatter(x=auto.x_after, y=auto.y_pred_after, name="Ajuste después", line=dict(color=OK, width=2)))
             style_fig(fig, 320, f"Quiebre automático: {MES_ES[auto.date.month - 1]}-{auto.date.year}")
             st.plotly_chart(fig, **STRETCH)
-            st.caption(f"Pendiente antes {auto.slope_before:,.1f}/mes, después {auto.slope_after:,.1f}/mes · Chow F = {auto.f_stat:.2f}, p = {auto.p_value:.3f} "
+            st.caption(f"Pendiente antes {auto.slope_before:,.1f}/mes, después {auto.slope_after:,.1f}/mes · Chow F = {auto.f_stat:.2f}, {ptxt(auto.p_value)} "
                        f"({'significativo' if auto.significant else 'no significativo'}). La fecha se busca sobre los datos, así que el p-valor es optimista.")
             st.markdown(interp(f"El algoritmo busca la fecha en que la serie cambia más de nivel o pendiente: <b>{MES_ES[auto.date.month - 1]}-{auto.date.year}</b>. "
                                f"Antes la pendiente era {auto.slope_before:,.1f}/mes y después {auto.slope_after:,.1f}/mes. "
@@ -1427,11 +1434,11 @@ def panel_tendencias(d: pd.DataFrame, name: str, idx: pd.DatetimeIndex, o: Opts)
             fig.add_vline(x=pd.Timestamp(ev_date).replace(day=1).timestamp() * 1000, line_dash="dot", line_color="#888")
             style_fig(fig, 320, "Test de Chow en la fecha elegida")
             st.plotly_chart(fig, **STRETCH)
-            st.caption(f"Pendiente antes {ev.slope_before:,.1f}/mes, después {ev.slope_after:,.1f}/mes · F = {ev.f_stat:.2f}, p = {ev.p_value:.3f} "
+            st.caption(f"Pendiente antes {ev.slope_before:,.1f}/mes, después {ev.slope_after:,.1f}/mes · F = {ev.f_stat:.2f}, {ptxt(ev.p_value)} "
                        f"({'significativo' if ev.significant else 'no significativo'}).")
             st.markdown(interp(f"Compara las dos rectas ajustadas antes y después de la fecha que elijas. "
                                f"{'Hay evidencia de que el comportamiento de la serie cambió' if ev.significant else 'No hay evidencia suficiente de que el comportamiento cambiara'} "
-                               f"en esa fecha (p = {ev.p_value:.3f}). Es asociación temporal, no prueba que el evento sea la causa."), unsafe_allow_html=True)
+                               f"en esa fecha ({ptxt(ev.p_value)}). Es asociación temporal, no prueba que el evento sea la causa."), unsafe_allow_html=True)
 
     st.markdown("##### Tendencia por componente")
     comp = st.radio("Componente", ["Tipo de consumo", "Diagnóstico (grupo)", "Medicamentos (principio activo)"], horizontal=True, key=f"{name}_t_comp")
@@ -1453,18 +1460,18 @@ def panel_tendencias(d: pd.DataFrame, name: str, idx: pd.DatetimeIndex, o: Opts)
     if rows:
         tb = pd.DataFrame(rows)
         tb["Lectura"] = [significance_label(p_, o.alpha) for p_ in tb["p"]]
-        tb["p"] = [num(v, 3) for v in tb["p"]]
+        tb["p"] = [pval(v, tabla=True) for v in tb["p"]]
 
         def _c(v):
             return {"creciente": f"background-color:{BAD}33", "decreciente": f"background-color:{OK}33"}.get(v, "")
-        st.dataframe(fmt_df(tb[["Serie", "Gasto total", "Meses", "Tendencia", "Lectura", "p", "Sen (S//mes)", "Sen anual (% de la media)"]],
-                            money=["Gasto total", "Sen (S//mes)"], pcts=["Sen anual (% de la media)"], ints=["Meses"]).map(_c, subset=["Tendencia"]),
+        st.dataframe(fmt_df(tb[["Serie", "Gasto total", "Meses", "Tendencia", "Lectura", "p", "Sen (S//mes)", "APC (% anual)", "IC 95% del APC"]],
+                            money=["Gasto total", "Sen (S//mes)"], pcts=["APC (% anual)"], ints=["Meses"]).map(_c, subset=["Tendencia"]),
                      hide_index=True, **STRETCH)
         st.caption("Gasto mensual de cada componente. Con muchas filas probadas a la vez, algún p-valor bajo saldrá por azar: úsalo para priorizar, no para concluir.")
         n_up = int((tb["Tendencia"] == "creciente").sum())
         n_dn = int((tb["Tendencia"] == "decreciente").sum())
         st.markdown(interp(f"De {len(tb)} componentes evaluados, {n_up} tienen tendencia creciente y {n_dn} decreciente (en rojo y verde). "
-                           "La columna «Sen anual» expresa el cambio anual típico como porcentaje de la media, útil para comparar componentes de distinto tamaño."), unsafe_allow_html=True)
+                           "La columna «APC» es el cambio porcentual anual de una regresión log-lineal, útil para comparar componentes de distinto tamaño."), unsafe_allow_html=True)
     else:
         st.info("Ningún componente tiene suficientes meses para el test.")
 

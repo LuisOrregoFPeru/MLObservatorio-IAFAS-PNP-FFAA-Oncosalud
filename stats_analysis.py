@@ -321,6 +321,33 @@ def cagr(first_value: float, last_value: float, n_periods: float) -> float | Non
 
 
 
+@dataclass
+class APCResult:
+    apc: float          # cambio porcentual anual (%)
+    lo: float           # IC 95% inferior (%)
+    hi: float           # IC 95% superior (%)
+    p_value: float
+    n: int              # meses usados (valores > 0)
+    n_excluded: int     # meses con valor <= 0 que no entran al logaritmo
+
+
+def apc_loglinear(values, times_months=None) -> APCResult | None:
+    """Cambio porcentual anual (APC) por regresión log-lineal, como en Joinpoint:
+    ln(y) = a + b·t con t en años; APC = (exp(b) − 1)·100, IC 95% con la t de Student sobre b.
+    Los meses con valor <= 0 no tienen logaritmo y se excluyen."""
+    y = np.asarray(values, dtype=float)
+    t = np.arange(len(y), dtype=float) / 12.0 if times_months is None else np.asarray(times_months, dtype=float) / 12.0
+    ok = np.isfinite(y) & (y > 0)
+    if ok.sum() < 8:
+        return None
+    res = stats.linregress(t[ok], np.log(y[ok]))
+    dfree = int(ok.sum()) - 2
+    tcrit = stats.t.ppf(0.975, dfree)
+    f = lambda b: (np.exp(b) - 1) * 100
+    return APCResult(apc=float(f(res.slope)), lo=float(f(res.slope - tcrit * res.stderr)), hi=float(f(res.slope + tcrit * res.stderr)),
+                     p_value=float(res.pvalue), n=int(ok.sum()), n_excluded=int((~ok).sum()))
+
+
 def alpha_stars(p: float) -> str:
     if p < 0.001:
         return "***"

@@ -17,9 +17,9 @@ from scipy.stats import norm
 
 from data_processing import SD_GROUP
 from panels import NOTA_INICIO, csv_button
-from stats_analysis import mann_kendall_trend
+from stats_analysis import apc_loglinear, mann_kendall_trend
 from ui import (
-    BAD, OK, PRIMARY, SECONDARY, STRETCH, WARN, Opts, fmt_df, interp, pct, soles, soles_short, style_fig,
+    BAD, OK, PRIMARY, SECONDARY, STRETCH, WARN, Opts, fmt_df, interp, pct, ptxt, soles, soles_short, style_fig,
 )
 
 MIN_PM = 30  # mínimo de paciente-mes por diagnóstico para tarificar
@@ -192,9 +192,10 @@ def build_reco(d: pd.DataFrame, d_rest: pd.DataFrame, name: str, o: Opts) -> lis
     if len(mm) >= 24:
         mk = mann_kendall_trend(mm.iloc[:-1].values, o.alpha)
         if mk is not None and mk.trend != "sin tendencia":
-            ch = mk.sen_slope * 12 / mm.mean() * 100
+            ap = apc_loglinear(mm.iloc[:-1].values)
+            ch = ap.apc if ap else mk.sen_slope * 12 / mm.mean() * 100
             out.append(("Media", "Cláusula de reajuste anual de la tarifa",
-                        f"El gasto mensual tiene tendencia {mk.trend} (p = {mk.p_value:.3f}), unos {ch:+.0f}% anual sobre la media.",
+                        f"El gasto mensual tiene tendencia {mk.trend} ({ptxt(mk.p_value)}), con un cambio porcentual anual (APC) de {ch:+.0f}%.",
                         "Pactar actualización anual de tarifas con la experiencia reciente y un corredor simétrico (si el costo real se aleja de la tarifa más de cierto porcentaje, se comparte la diferencia)."))
     pr = {"Alta": 0, "Media": 1, "Baja": 2}
     return sorted(out, key=lambda r: pr[r[0]])

@@ -1,7 +1,8 @@
 """
-Observatorio del Consumo por IAFAS SaludPol, FF.AA. y Oncosalud | INEN
+Observatorio del Consumo por IAFAS | INEN
 Dashboard Streamlit: una pestaña por IAFAS con resumen e ingreso, ámbito de atención, diagnósticos, medicamentos,
-insumos, procedimientos, gasto, tendencias y proyecciones. 
+insumos, procedimientos, gasto, tendencias y proyecciones. Misma arquitectura que el
+Observatorio del Financiamiento Oncológico, sin el módulo de impacto normativo.
 """
 
 from __future__ import annotations
@@ -324,7 +325,7 @@ _T_EN = "IAFAS Consumption Observatory: SaludPol, Armed Forces and Oncosalud"
 st.divider()
 st.markdown(
     """<p class="source-note" style="text-align:center; margin-top:0.6rem;">© Luis A. Orrego Ferreyros, Econ.,
-MCE, MMD, PhD(c), CQRM · Epidemiólogo y Economista de la Salud · INEN</p>""",
+MCE, MMD, PhD(c), CQRM · Epidemiólogo y Economista de la Salud — INEN</p>""",
     unsafe_allow_html=True,
 )
 st.markdown(
