@@ -349,3 +349,4 @@ _d1, _d2, _d3 = st.columns(3)
 _d1.download_button("⬇️ BibTeX (*.bib)", _bib, file_name="observatorio_iafas_inen.bib", mime="text/plain", key="cite_bib")
 _d2.download_button("⬇️ EndNote XML (*.xml)", _xml, file_name="observatorio_iafas_inen.xml", mime="application/xml", key="cite_xml")
 _d3.download_button("⬇️ RIS (*.ris)", _ris, file_name="observatorio_iafas_inen.ris", mime="application/x-research-info-systems", key="cite_ris")
+ 
