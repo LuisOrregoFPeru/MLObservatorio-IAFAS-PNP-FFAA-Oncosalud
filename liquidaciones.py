@@ -12,19 +12,19 @@ import streamlit as st
 from ui import OK, PRIMARY, SECONDARY, STRETCH, WARN, fmt_df, interp, mes, num, pct, soles, soles_short, style_fig
 
 LIQ_FILE = Path(__file__).parent / "data" / "liquidaciones.csv"
-# Cifras del informe (el Excel de ONCOSALUD no fue remitido, solo su total)
+# Cifras del informe
 INFORME = {"SALUDPOL": 25649352.86, "ONCOSALUD": 5961294.68, "FOSMAR (Marina de Guerra)": 395075.61,
            "FOSPEME (Ejército)": 247710.43, "FOSFAP (Fuerza Aérea)": 74863.06}
 INFORME_TOTAL = 32328296.64
-CON_DETALLE = ["SALUDPOL", "FOSPEME (Ejército)", "FOSMAR (Marina de Guerra)", "FOSFAP (Fuerza Aérea)"]
-TODAS = "Las 4 IAFAS con detalle"
+CON_DETALLE = ["SALUDPOL", "FOSPEME (Ejército)", "FOSMAR (Marina de Guerra)", "FOSFAP (Fuerza Aérea)", "ONCOSALUD"]
+TODAS = "Las 5 IAFAS"
 
 
 @st.cache_data
 def load_liq() -> pd.DataFrame:
     d = pd.read_csv(LIQ_FILE, parse_dates=["fecha"])
     d["mes"] = d["fecha"].dt.to_period("M").dt.to_timestamp()
-    d["persona"] = ~d["cliente"].fillna("").str.upper().str.contains("SALUDPOL|IAFAS")
+    d["persona"] = ~d["cliente"].fillna("").str.upper().str.contains("SALUDPOL|IAFAS|ONCOSALUD")
     return d
 
 
@@ -82,7 +82,7 @@ def panel_liquidaciones(fact: pd.DataFrame, opts, filtros_activos: bool) -> None
                 help="Saldo por liquidar dividido entre la producción mensual promedio de los últimos 12 meses.")
 
     desde = mes(first)
-    txt = (f"Entre {desde} y {mes(hi)}, {sel if sel != TODAS else 'las IAFAS con detalle'} generó {soles_short(P_)} de producción y se liquidaron {soles_short(L_)} "
+    txt = (f"Entre {desde} y {mes(hi)}, {sel if sel != TODAS else 'las 5 IAFAS'} generó {soles_short(P_)} de producción y se liquidaron {soles_short(L_)} "
            f"({pct(L_ / P_ * 100 if P_ else None)}). ")
     if saldo > 0:
         txt += f"Quedan {soles_short(saldo)} sin liquidar, equivalentes a {num(saldo / media12, 1) if media12 else 'n/d'} meses de producción reciente."
@@ -162,9 +162,9 @@ def panel_liquidaciones(fact: pd.DataFrame, opts, filtros_activos: bool) -> None
         # curvas acumuladas por IAFAS, una al lado de otra, con el total como primer panel
         from plotly.subplots import make_subplots
         paneles = [(nm, [nm]) for nm in CON_DETALLE]
-        fig = make_subplots(rows=2, cols=2, subplot_titles=[p[0] for p in paneles], horizontal_spacing=0.09, vertical_spacing=0.2)
+        fig = make_subplots(rows=2, cols=3, subplot_titles=[p[0] for p in paneles], horizontal_spacing=0.09, vertical_spacing=0.2)
         for j, (ttl, nms) in enumerate(paneles):
-            r_, c_ = j // 2 + 1, j % 2 + 1
+            r_, c_ = j // 3 + 1, j % 3 + 1
             pr_m = fact[fact["iafas"].astype(str).isin(nms) & (fact["tiempo"] >= lo) & (fact["tiempo"] <= hi)].groupby("tiempo")["gasto"].sum().reindex(idx, fill_value=0.0)
             lq_m = lq[lq["iafas"].isin(nms)].groupby("mes")["monto"].sum().reindex(idx, fill_value=0.0)
             f0 = [x for x in (pr_m[pr_m > 0].index.min(), lq_m[lq_m > 0].index.min()) if pd.notna(x)]
@@ -195,13 +195,12 @@ def panel_liquidaciones(fact: pd.DataFrame, opts, filtros_activos: bool) -> None
                          "Producción total de la serie": pr})
         c = pd.DataFrame(rows)
         st.dataframe(fmt_df(c, money=["Según el informe", "Suma del Excel", "Diferencia", "Producción total de la serie"]), hide_index=True, **STRETCH)
-        st.caption(f"Total del informe: {soles(INFORME_TOTAL, 2)}. ONCOSALUD figura con su total, pero su detalle no fue remitido, por eso no entra en las curvas ni en los gráficos. "
-                   "MEDIC SER S.A.C. (Auna Clínica Delgado) no registra liquidaciones. Los totales por IAFAS del Excel coinciden con el informe.")
-        o = INFORME["ONCOSALUD"]
-        po = float(fact[(fact["iafas"].astype(str) == "ONCOSALUD")]["gasto"].sum())
-        st.markdown(interp(f"Referencia: la producción total de ONCOSALUD en la serie es {soles_short(po)} y el informe reporta {soles_short(o)} liquidados "
-                           f"({pct(o / po * 100 if po else None)}), sin saber en qué años."), unsafe_allow_html=True)
+        sf = liq[liq["fecha"].isna()]
+        nota = (f" {len(sf)} liquidación(es) por {soles(sf['monto'].sum(), 0)} no trae fecha de cancelación: suma en el total pero no aparece en las curvas ni en los periodos. "
+                "En el Excel de ONCOSALUD repite el N.° de documento de otra liquidación del mismo monto, así que conviene revisar si es un duplicado." if len(sf) else "")
+        st.caption(f"Total del informe: {soles(INFORME_TOTAL, 2)}. MEDIC SER S.A.C. (Auna Clínica Delgado) no registra liquidaciones. "
+                   f"Los totales por IAFAS del Excel coinciden con el informe.{nota}")
 
     st.markdown(interp("<b>Cómo leerlo.</b> Una brecha entre producción y liquidado puede deberse a deuda aún no pagada, glosas u observaciones, atenciones valorizadas que no llegaron a facturarse, "
                        "pagos hechos directamente por pacientes, o desfase de periodos. Esta pestaña mide la brecha; no explica su causa. "
-                       "La producción de FF.AA. empieza cuando cada IAFAS aparece en la extracción, mientras que SALUDPOL tiene liquidaciones desde enero de 2019."), unsafe_allow_html=True)
+                       "La producción de FF.AA. empieza cuando cada IAFAS aparece en la extracción, mientras que SALUDPOL y ONCOSALUD tienen liquidaciones desde enero de 2019."), unsafe_allow_html=True)

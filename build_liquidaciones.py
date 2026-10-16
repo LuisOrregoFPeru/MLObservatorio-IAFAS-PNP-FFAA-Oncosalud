@@ -3,7 +3,7 @@ Uso: python build_liquidaciones.py <carpeta con los xlsx>  ->  data/liquidacione
 import sys, glob, re
 import pandas as pd, openpyxl
 
-MAP = {"SALUDPOL": "SALUDPOL", "EJERCITO": "FOSPEME (Ejército)", "MARINA": "FOSMAR (Marina de Guerra)", "FUERZA_AEREA": "FOSFAP (Fuerza Aérea)"}
+MAP = {"ONCOSALUD": "ONCOSALUD", "SALUDPOL": "SALUDPOL", "EJERCITO": "FOSPEME (Ejército)", "MARINA": "FOSMAR (Marina de Guerra)", "FUERZA_AEREA": "FOSFAP (Fuerza Aérea)"}
 def iafas_de(fn):
     for k, v in MAP.items():
         if k in fn.upper(): return v
