@@ -1,8 +1,7 @@
 """
-Observatorio del Consumo por IAFAS | INEN
+Observatorio del Consumo por IAFAS SaludPol, FF.AA. y Oncosalud | INEN
 Dashboard Streamlit: una pestaña por IAFAS con resumen e ingreso, ámbito de atención, diagnósticos, medicamentos,
-insumos, procedimientos, gasto, tendencias y proyecciones. Misma arquitectura que el
-Observatorio del Financiamiento Oncológico, sin el módulo de impacto normativo.
+insumos, procedimientos, gasto, tendencias y proyecciones. 
 """
 
 from __future__ import annotations
@@ -251,9 +250,9 @@ else:
 (medicina, material médico o procedimiento) facturada a una IAFAS. El archivo se compacta con `build_data.py`; el DNI se
 reemplaza por un identificador seudonimizado y no se publica.
 
-**Liquidaciones.** Montos cancelados por cada IAFAS (SALUDPOL, FOSPEME, FOSMAR, FOSFAP) con su fecha de cancelación, remitidos por la Oficina de Contabilidad y
+**Liquidaciones.** Montos cancelados por cada IAFAS (SALUDPOL, ONCOSALUD, FOSPEME, FOSMAR, FOSFAP) con su fecha de cancelación, remitidos por la Oficina de Contabilidad y
 Finanzas (Informe N.° 000271-2026-OCF-OGA/INEN). Se consolidan con `build_liquidaciones.py` en `data/liquidaciones.csv` y se contrastan con la producción en la pestaña
-«Producción vs liquidaciones». ONCOSALUD solo tiene su total en el informe.
+«Producción vs liquidaciones».
 
 **Gasto.** `cantidad × precio` de cada línea. Es el valor facturado por el INEN a la IAFAS, es decir, el siniestro incurrido por la
 IAFAS en este hospital; no incluye lo que la IAFAS paga en otros prestadores.
