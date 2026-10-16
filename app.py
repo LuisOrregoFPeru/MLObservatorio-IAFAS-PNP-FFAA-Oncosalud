@@ -314,3 +314,39 @@ agosto. Los meses sin consumo se cuentan como cero.
 
 **Actualizar los datos.** `python build_data.py RUTA/DATA_IAFAS.xlsx` regenera `data/`. Para primas fijas, edita `data/primas.csv`.
 """)
+
+# ---------------------------------------------------------------------------
+# Autoría y cómo citar
+# ---------------------------------------------------------------------------
+_YR = 2026
+_URL = "https://mlobservatorio-iafas-pnp-ffaa-oncosalud.streamlit.app/"
+_T_ES = "Observatorio de Consumo de IAFAS SaludPol, FF.AA. y Oncosalud"
+_T_EN = "IAFAS Consumption Observatory: SaludPol, Armed Forces and Oncosalud"
+st.divider()
+st.markdown(
+    """<p class="source-note" style="text-align:center; margin-top:0.6rem;">© Luis A. Orrego Ferreyros, DDS, Econ.,
+MCE, MMD, PhD(c), CQRM · Epidemiólogo y Economista de la Salud — INEN</p>""",
+    unsafe_allow_html=True,
+)
+st.markdown(
+    f"""<div class="citation-box">
+<h4>REFERENCIA WEB (formato AMA)</h4>
+<p>Orrego-Ferreyros LA. {_T_ES}. Instituto Nacional de Enfermedades Neoplásicas. Published {_YR}. Accessed [Mes Día, Año]. {_URL}</p>
+<h4>WEB REFERENCE (AMA format)</h4>
+<p>Orrego-Ferreyros LA. {_T_EN}. National Institute of Neoplastic Diseases. Published {_YR}. Accessed [Month Day, Year]. {_URL}</p>
+</div>""",
+    unsafe_allow_html=True,
+)
+_ris = (f"TY  - ELEC\nAU  - Orrego-Ferreyros, Luis Alexander\nTI  - {_T_ES} / {_T_EN}\nPY  - {_YR}\n"
+        f"PB  - Instituto Nacional de Enfermedades Neoplásicas\nUR  - {_URL}\nER  - \n")
+_bib = (f"@misc{{orregoferreyros{_YR}iafas,\n  author = {{Orrego-Ferreyros, Luis Alexander}},\n  title = {{{_T_ES} / {_T_EN}}},\n"
+        f"  year = {{{_YR}}},\n  publisher = {{Instituto Nacional de Enfermedades Neopl\\'asicas}},\n  url = {{{_URL}}}\n}}\n")
+_xml = (f'<?xml version="1.0" encoding="UTF-8"?>\n<xml><records><record>\n<ref-type name="Web Page">12</ref-type>\n'
+        f"<contributors><authors><author>Orrego-Ferreyros, Luis Alexander</author></authors></contributors>\n"
+        f"<titles><title>{_T_ES} / {_T_EN}</title></titles>\n<dates><year>{_YR}</year></dates>\n"
+        f"<publisher>Instituto Nacional de Enfermedades Neoplásicas</publisher>\n<urls><related-urls><url>{_URL}</url></related-urls></urls>\n"
+        f"</record></records></xml>\n")
+_d1, _d2, _d3 = st.columns(3)
+_d1.download_button("⬇️ BibTeX (*.bib)", _bib, file_name="observatorio_iafas_inen.bib", mime="text/plain", key="cite_bib")
+_d2.download_button("⬇️ EndNote XML (*.xml)", _xml, file_name="observatorio_iafas_inen.xml", mime="application/xml", key="cite_xml")
+_d3.download_button("⬇️ RIS (*.ris)", _ris, file_name="observatorio_iafas_inen.ris", mime="application/x-research-info-systems", key="cite_ris")

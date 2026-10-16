@@ -50,6 +50,11 @@ CSS = f"""
     .reco-head {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: .25rem; font-size: 1rem; color: {ACCENT}; }}
     .reco-tag {{ font-size: .75rem; font-weight: 600; border-radius: 10px; padding: .1rem .6rem; }}
     .mini-title {{ font-size: .95rem; font-weight: 600; color: {ACCENT}; margin-bottom: .2rem; }}
+    .source-note {{ font-size: 0.8rem; color: #666; margin-top: 0.4rem; }}
+    .citation-box {{ background: #fafbfc; border: 1px solid #e2e6ee; border-radius: 8px;
+                      padding: 1rem 1.2rem; margin-top: 1.2rem; font-size: 0.85rem; color: #333; }}
+    .citation-box h4 {{ margin: 0 0 0.5rem 0; font-size: 0.8rem; letter-spacing: 0.04em; color: {ACCENT}; }}
+    .citation-box p {{ margin: 0 0 0.6rem 0; line-height: 1.5; }}
 </style>
 """
 
