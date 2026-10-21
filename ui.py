@@ -55,6 +55,7 @@ CSS = f"""
                       padding: 1rem 1.2rem; margin-top: 1.2rem; font-size: 0.85rem; color: #333; }}
     .citation-box h4 {{ margin: 0 0 0.5rem 0; font-size: 0.8rem; letter-spacing: 0.04em; color: {ACCENT}; }}
     .citation-box p {{ margin: 0 0 0.6rem 0; line-height: 1.5; }}
+    .asist-q {{ background: #eef3f9; border-radius: 8px; padding: .45rem .7rem; margin: .4rem 0 .3rem 0; font-size: .88rem; color: {ACCENT}; font-weight: 600; }}
 </style>
 """
 

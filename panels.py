@@ -1288,7 +1288,8 @@ def _mk_row(label: str, s: pd.Series, alpha: float) -> dict | None:
         return None
     ap = apc_loglinear(s.values)
     return {"Serie": label, "Meses": len(s), "Tendencia": mk.trend, "p": mk.p_value, "Sen (S//mes)": mk.sen_slope,
-            "APC (% anual)": ap.apc if ap else np.nan, "IC 95% del APC": (f"{num(ap.lo, 1)}% a {num(ap.hi, 1)}%" if ap else "—"), "Variante": mk.variant_used}
+            "APC (% anual)": ap.apc if ap else np.nan, "IC 95% del APC": (f"{num(ap.lo, 1)}% a {num(ap.hi, 1)}%" if ap else "—"), "Variante": mk.variant_used,
+            "_lo": ap.lo if ap else np.nan, "_hi": ap.hi if ap else np.nan}
 
 
 def panel_tendencias(d: pd.DataFrame, name: str, idx: pd.DatetimeIndex, o: Opts) -> None:
@@ -1441,37 +1442,117 @@ def panel_tendencias(d: pd.DataFrame, name: str, idx: pd.DatetimeIndex, o: Opts)
                                f"en esa fecha ({ptxt(ev.p_value)}). Es asociación temporal, no prueba que el evento sea la causa."), unsafe_allow_html=True)
 
     st.markdown("##### Tendencia por componente")
-    comp = st.radio("Componente", ["Tipo de consumo", "Diagnóstico (grupo)", "Medicamentos (principio activo)"], horizontal=True, key=f"{name}_t_comp")
-    by = {"Tipo de consumo": "tipo", "Diagnóstico (grupo)": "dx_grupo", "Medicamentos (principio activo)": "principio_activo"}[comp]
-    base = d[d["tipo"] == "MEDICAMENTO"] if by == "principio_activo" else d
+    cc1, cc2 = st.columns([3, 1.2])
+    comp = cc1.radio("Componente", ["Tipo de consumo", "Diagnóstico (grupo)", "Medicamentos (principio activo)", "Insumos", "Procedimientos",
+                                    "Ámbito de atención"], horizontal=True, key=f"{name}_t_comp")
+    comp_met = cc2.selectbox("Métrica del componente", ["Gasto (S/)", "Pacientes activos"], key=f"{name}_t_cm")
+    cm = METRICS[comp_met]
+    by, base = {
+        "Tipo de consumo": ("tipo", d), "Diagnóstico (grupo)": ("dx_grupo", d),
+        "Medicamentos (principio activo)": ("principio_activo", d[d["tipo"] == "MEDICAMENTO"]),
+        "Insumos": ("descripcion", d[d["tipo"] == "INSUMO"]), "Procedimientos": ("descripcion", d[d["tipo"] == "PROCEDIMIENTO"]),
+        "Ámbito de atención": ("ambito_macro", d),
+    }[comp]
     if by == "dx_grupo" and st.checkbox(f"Omitir «{SD_GROUP}»", value=False, key=f"{name}_t_sd"):
         base = base[base["dx_grupo"] != SD_GROUP]
-    cats = base.groupby(by, observed=True)["gasto"].sum().sort_values(ascending=False).head(12).index.tolist()
-    rows = []
+    if cm == "pacientes":
+        cats = base[base["pid"] >= 0].groupby(by, observed=True)["pid"].nunique().sort_values(ascending=False).head(12).index.tolist()
+    else:
+        cats = base.groupby(by, observed=True)["gasto"].sum().sort_values(ascending=False).head(12).index.tolist()
+    rows, series_c = [], {}
     for cc in cats:
-        sc = series_metric(base[base[by] == cc], "gasto", "MS", idx)
+        sc = series_metric(base[base[by] == cc], cm, "MS", idx)
         if excl_last and len(sc):
             sc = sc.iloc[:-1]
         sc = drop_covid(sc, excl_covid)
-        r = _mk_row(str(TIPO_LABEL.get(cc, cc)), sc, o.alpha)
+        lbl = str(TIPO_LABEL.get(cc, cc))
+        r = _mk_row(lbl, sc, o.alpha)
         if r:
             r["Gasto total"] = base.loc[base[by] == cc, "gasto"].sum()
+            r["Pacientes"] = base.loc[(base[by] == cc) & (base["pid"] >= 0), "pid"].nunique()
             rows.append(r)
+            series_c[lbl] = sc
     if rows:
         tb = pd.DataFrame(rows)
         tb["Lectura"] = [significance_label(p_, o.alpha) for p_ in tb["p"]]
+        p_num = tb["p"].copy()
         tb["p"] = [pval(v, tabla=True) for v in tb["p"]]
+        money_c = metric_money(cm)
+
+        # --- gráficos: un panel por componente con su serie y la recta de Sen ---
+        n_c = len(tb)
+        ncol = 3 if n_c > 4 else 2 if n_c > 1 else 1
+        nrow = int(np.ceil(n_c / ncol))
+        tcol = {"creciente": BAD, "decreciente": OK}
+        titles = []
+        for _, r in tb.iterrows():
+            apc_t = f" · APC {num(r['APC (% anual)'], 1)}%" if r["APC (% anual)"] == r["APC (% anual)"] else ""
+            nm = r["Serie"] if len(r["Serie"]) <= 34 else r["Serie"][:33] + "…"
+            titles.append(f"{nm}<br><span style='font-size:10px'>{r['Tendencia']}{apc_t}</span>")
+        fig = make_subplots(rows=nrow, cols=ncol, subplot_titles=titles, vertical_spacing=min(0.12, 0.5 / max(nrow, 1)), horizontal_spacing=0.06)
+        for i, (_, r) in enumerate(tb.iterrows()):
+            sc = series_c[r["Serie"]].dropna()
+            rr, ccol = i // ncol + 1, i % ncol + 1
+            col = tcol.get(r["Tendencia"], "#7D7D7D")
+            fig.add_trace(go.Scatter(x=sc.index, y=sc.values, mode="lines", line=dict(color=hex_to_rgba(PRIMARY, .55), width=1.3),
+                                     name=r["Serie"], showlegend=False, hovertemplate="%{x|%Y-%m}: %{y:,.0f}<extra></extra>"), row=rr, col=ccol)
+            xx = np.arange(len(sc))
+            sen_c = np.median(sc.values - r["Sen (S//mes)"] * xx) + r["Sen (S//mes)"] * xx
+            fig.add_trace(go.Scatter(x=sc.index, y=sen_c, mode="lines", line=dict(color=col, width=2.6, dash="dash"),
+                                     name="Sen", showlegend=False, hoverinfo="skip"), row=rr, col=ccol)
+            if o.lowess:
+                sm_c = smooth_series(np.nan_to_num(sc.values.astype(float)))
+                if sm_c is not None:
+                    fig.add_trace(go.Scatter(x=sc.index, y=sm_c, mode="lines", line=dict(color=SECONDARY, width=1.6), showlegend=False,
+                                             hoverinfo="skip"), row=rr, col=ccol)
+        fig.update_annotations(font_size=11)
+        st.markdown(f"<div class='mini-title'>{comp_met} mensual por componente y tendencia de Sen</div>", unsafe_allow_html=True)
+        fig.update_layout(height=max(260, 215 * nrow + 40), margin=dict(l=10, r=10, t=45, b=20), plot_bgcolor="white", paper_bgcolor="white",
+                          hovermode="closest")
+        fig.update_xaxes(showgrid=False, linecolor="#ccc", tickfont=dict(size=9))
+        fig.update_yaxes(gridcolor="#eceff4", tickfont=dict(size=9), tickprefix="S/ " if money_c else "", tickformat="~s")
+        if o.log:
+            fig.update_yaxes(type="log")
+        st.plotly_chart(fig, **STRETCH)
+        st.caption("Línea azul: serie mensual. Línea discontinua: tendencia de Sen, en rojo si es creciente y significativa, en verde si es decreciente y en gris si no hay "
+                   "tendencia. Cada panel tiene su propia escala: compara la forma y la dirección, no la altura.")
+
+        # --- APC con intervalo de confianza (comparable entre componentes de distinto tamaño) ---
+        ta = tb.dropna(subset=["APC (% anual)"]).copy()
+        if len(ta):
+            ta = ta.sort_values("APC (% anual)")
+            ta["_sig"] = [(lo_ > 0 or hi_ < 0) if lo_ == lo_ else False for lo_, hi_ in zip(ta["_lo"], ta["_hi"])]
+            cols_ = [(BAD if a_ > 0 else OK) if s_ else "#9AA5B1" for a_, s_ in zip(ta["APC (% anual)"], ta["_sig"])]
+            fa = go.Figure(go.Scatter(
+                x=ta["APC (% anual)"], y=[x if len(x) <= 40 else x[:39] + "…" for x in ta["Serie"]], mode="markers",
+                marker=dict(size=10, color=cols_),
+                error_x=dict(type="data", symmetric=False, array=(ta["_hi"] - ta["APC (% anual)"]).clip(lower=0),
+                             arrayminus=(ta["APC (% anual)"] - ta["_lo"]).clip(lower=0), color="#9AA5B1", thickness=1.5),
+                hovertemplate="%{y}: %{x:.1f}% anual<extra></extra>"))
+            fa.add_vline(x=0, line_dash="dot", line_color="#888")
+            style_fig(fa, max(260, 34 * len(ta) + 90), "Cambio porcentual anual (APC) por componente, con IC 95%")
+            fa.update_layout(hovermode="closest", showlegend=False)
+            fa.update_xaxes(ticksuffix="%", showgrid=True, gridcolor="#eceff4")
+            fa.update_yaxes(type="category")
+            st.plotly_chart(fa, **STRETCH)
+            st.caption("Punto rojo o verde: el intervalo no cruza el cero (crecimiento o caída anual estadísticamente distinta de cero). Gris: el intervalo cruza el cero. "
+                       "Los meses en cero se excluyen del APC, así que en series intermitentes el APC describe solo los meses con consumo.")
 
         def _c(v):
             return {"creciente": f"background-color:{BAD}33", "decreciente": f"background-color:{OK}33"}.get(v, "")
-        st.dataframe(fmt_df(tb[["Serie", "Gasto total", "Meses", "Tendencia", "Lectura", "p", "Sen (S//mes)", "APC (% anual)", "IC 95% del APC"]],
-                            money=["Gasto total", "Sen (S//mes)"], pcts=["APC (% anual)"], ints=["Meses"]).map(_c, subset=["Tendencia"]),
+        sen_lbl = "Sen (S//mes)" if money_c else "Sen (pac./mes)"
+        tb = tb.rename(columns={"Sen (S//mes)": sen_lbl})
+        show = ["Serie", "Gasto total", "Pacientes", "Meses", "Tendencia", "Lectura", "p", sen_lbl, "APC (% anual)", "IC 95% del APC"]
+        st.dataframe(fmt_df(tb[show], money=["Gasto total"] + ([sen_lbl] if money_c else []), pcts=["APC (% anual)"], ints=["Meses", "Pacientes"],
+                            decs=[] if money_c else [sen_lbl]).map(_c, subset=["Tendencia"]),
                      hide_index=True, **STRETCH)
-        st.caption("Gasto mensual de cada componente. Con muchas filas probadas a la vez, algún p-valor bajo saldrá por azar: úsalo para priorizar, no para concluir.")
+        st.caption(f"{comp_met} mensual de cada componente (los 12 de mayor {'gasto' if cm == 'gasto' else 'número de pacientes'}). Con muchas filas probadas a la vez, "
+                   "algún p-valor bajo saldrá por azar: úsalo para priorizar, no para concluir.")
         n_up = int((tb["Tendencia"] == "creciente").sum())
         n_dn = int((tb["Tendencia"] == "decreciente").sum())
         st.markdown(interp(f"De {len(tb)} componentes evaluados, {n_up} tienen tendencia creciente y {n_dn} decreciente (en rojo y verde). "
                            "La columna «APC» es el cambio porcentual anual de una regresión log-lineal, útil para comparar componentes de distinto tamaño."), unsafe_allow_html=True)
+        csv_button(tb[show], "Descargar tendencias por componente (CSV)", f"tendencias_componentes_{name}.csv", f"{name}_t_csv")
     else:
         st.info("Ningún componente tiene suficientes meses para el test.")
 

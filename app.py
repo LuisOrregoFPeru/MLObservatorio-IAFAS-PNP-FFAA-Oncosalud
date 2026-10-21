@@ -16,6 +16,8 @@ from data_processing import (
 )
 import panels as P
 import reco as R
+import asistente as A
+import proyecciones_comp as PC
 from ui import CSS, mes, num, STRETCH, Opts, fmt_df, interp, warn
 
 st.set_page_config(page_title="Observatorio del Consumo por IAFAS | INEN", page_icon="📊", layout="wide",
@@ -37,6 +39,7 @@ st.markdown(
 # ---------------------------------------------------------------------------
 with st.sidebar:
     st.header("⚙️ Panel de control")
+    asist_box = st.container()        # asistente de consultas: se llena cuando ya existen los filtros
     st.caption("Los filtros se aplican a todas las pestañas.")
 
     _meses = list(pd.date_range(MIN_M, MAX_M, freq="MS"))
@@ -125,6 +128,9 @@ st.caption(f"**Selección:** {mes(date_lo)} a {mes(date_hi)} · {len(tipos)} tip
            f"{'sin filtros adicionales' if n_filters == 0 else f'{n_filters} filtro(s) adicional(es) activo(s)'} · "
            f"{len(flt):,} registros agregados")
 
+with st.sidebar, asist_box:
+    A.render(flt, fact)
+
 if flt.empty:
     st.warning("La selección no devuelve datos. Amplía el rango o quita filtros.")
     st.stop()
@@ -206,6 +212,7 @@ elif choice in IAFAS_TABS:
         P.panel_tendencias(d_i, choice, idx, opts)
     with tabs[8]:
         P.panel_proyecciones(d_i, choice, idx, opts)
+        PC.panel_componentes(d_i, choice, idx, opts)
     with tabs[9]:
         R.panel_recomendaciones(d_i, d_r, choice, idx, opts)
 
@@ -308,6 +315,16 @@ busca en los datos); test de Chow en una fecha elegida. La pandemia (mar–dic 2
 **Proyecciones.** Holt con tendencia amortiguada (escenario recomendado) con banda por bootstrap de residuos, un escenario conservador (media de los
 últimos tres meses), uno lineal con la pendiente de Sen y un escenario propio con la variación anual que definas. No hay estacionalidad explícita
 y los picos por un solo medicamento de alto costo pueden mover la proyección: usa «Atenuar picos» para ver la sensibilidad.
+
+**Proyección por componente.** Debajo de la proyección principal se proyectan, con el mismo horizonte, ventana y banda: medicamentos (por defecto los de la lista
+nominal de alto costo no PNUME, por principio activo), insumos y procedimientos (por defecto los de mayor gasto) y pacientes activos por diagnóstico. Cada serie empieza en su
+primer mes con consumo. Si hay consumo en la mayoría de los meses se usa Holt amortiguado; si más del 30% de los meses están en cero se usa Croston con corrección SBA
+(promedio mensual esperado = probabilidad de consumo × monto típico); con menos de 12 meses desde el primer consumo se usa la tasa reciente. La banda se obtiene simulando
+1 000 trayectorias futuras, y la banda de los 12 meses sale de esas trayectorias. Un medicamento de alto costo depende de pocos pacientes: la proyección es un valor esperado, no
+anticipa el ingreso o la salida de un paciente concreto.
+
+**Tendencia por componente.** Para cada componente (tipo de consumo, diagnóstico, principio activo, insumo, procedimiento o ámbito) se grafica su serie mensual con la recta
+de Sen y se compara el APC con su IC 95%.
 
 **Limitaciones.** Las IAFAS pequeñas (FOSFAP, FOSMAR, FOSPEME) tienen pocos pacientes y meses sin consumo; sus tendencias son descriptivas. 2026 llega hasta
 agosto. Los meses sin consumo se cuentan como cero.
