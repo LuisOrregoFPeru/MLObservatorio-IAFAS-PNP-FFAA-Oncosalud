@@ -7,6 +7,14 @@ INEN.V_CONSUMO_CUENTA_PACIENTE_IAFAS) en tres archivos compactos y ANONIMIZADOS:
   data/fact_iafas.parquet   una fila por IAFAS x mes x paciente(seudónimo) x dx x ítem
   data/items.csv            catálogo de ítems (descripción canónica, principio activo, tipo)
   data/dx_catalog.csv       catálogo de diagnósticos CIE-10 con grupo de sitio
+  data/pacientes.parquet    una fila por paciente (seudónimo) con el mes de deceso, si lo hay
+  data/meta.json            fecha de corte del estado vital
+
+Campos añadidos en la versión V02 de la extracción:
+  TIPO_ATENCION  tipo de atención registrado por el INEN en cada línea (AMBULATORIO / HOSPITALIZADO).
+                 Reemplaza la inferencia por paciente-mes que se usaba antes para medicamentos e insumos.
+  DX_ESTADIO     estadío clínico registrado (I, IIIb, IV…, «desc» = desconocido).
+  FEC_DECESO     fecha de fallecimiento. Por minimización de datos solo se guarda el MES de deceso.
 
 Uso:
     python build_data.py RUTA/DATA_IAFAS.xlsx
@@ -17,6 +25,7 @@ hash con sal (PID_SALT), suficiente para contar pacientes únicos.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 import sys
@@ -169,6 +178,27 @@ def ambito_inferido(df: pd.DataFrame) -> pd.Series:
     return out.fillna("Sin procedimiento asociado en el mes")
 
 
+ATENCION_MAP = {"AMBULATORIO": "Ambulatorio", "HOSPITALIZADO": "Hospitalización"}
+ATENCION_SD = "Sin dato (líneas sin paciente)"
+AMB_NO_APLICA = "No aplica (medicamento o insumo)"
+
+
+def estadio_detalle(s: pd.Series) -> pd.Series:
+    x = s.fillna("").astype(str).str.strip()
+    x = x.where(~x.str.lower().isin(["desc", "desconocido"]), "Desconocido")
+    return x.replace("", "Sin dato")
+
+
+def estadio_grupo(det: pd.Series) -> pd.Series:
+    """Estadío agrupado en números romanos (IIIb -> III, I-E -> I)."""
+    def g(v: str) -> str:
+        if v in ("Desconocido", "Sin dato"):
+            return v
+        m = re.match(r"^(IV|III|II|I|0)", v.upper())
+        return m.group(1) if m else "Otro"
+    return det.map(g)
+
+
 def principio_activo(desc: str) -> str:
     d = re.sub(r"\s+", " ", str(desc)).strip()
     toks = d.split(" ")
@@ -196,7 +226,7 @@ def edad_grupo(e: pd.Series) -> pd.Series:
 
 
 def main(path: str) -> None:
-    raw = pd.read_excel(path, sheet_name=0, dtype=str)
+    raw = pd.read_parquet(path) if path.endswith(".parquet") else pd.read_excel(path, sheet_name=0, dtype=str)
     print("filas crudas:", len(raw))
     df = pd.DataFrame()
     df["anio"] = raw["ANIO"].astype(int)
@@ -221,8 +251,20 @@ def main(path: str) -> None:
     cods = df["cod_item"].unique()
     amb_map = {c: ambito_proc(c, tar.get(c)) for c in cods}
     df["ambito"] = np.where(df.tipo == "PROCEDIMIENTO", df.cod_item.map(amb_map), None)
-    inf = ambito_inferido(df)
-    df["ambito"] = df["ambito"].where(df.tipo == "PROCEDIMIENTO", inf)
+    # Tipo de atención real (registro INEN). Antes se infería para medicamentos e insumos; ahora viene en la data.
+    df["atencion"] = raw["TIPO_ATENCION"].str.strip().str.upper().map(ATENCION_MAP).fillna(ATENCION_SD) \
+        if "TIPO_ATENCION" in raw else ATENCION_SD
+    if "TIPO_ATENCION" in raw:   # diagnóstico: cuánto acertaba la inferencia anterior
+        inf = ambito_inferido(df).str.replace(" (inferido)", "", regex=False)
+        mi = (df.tipo != "PROCEDIMIENTO") & (df.atencion != ATENCION_SD)
+        inf_m = inf[mi].map({"Hospitalización": "Hospitalización", "Ambulatorio": "Ambulatorio"}).fillna("Otro")
+        ok = (inf_m == df.loc[mi, "atencion"])
+        print("inferencia anterior vs real (medicamentos e insumos): acierto en gasto {:.1%}".format(
+            df.loc[mi, "gasto"][ok].sum() / df.loc[mi, "gasto"].sum()))
+        print(pd.crosstab(inf[mi], df.loc[mi, "atencion"], values=df.loc[mi, "gasto"], aggfunc="sum").round(0))
+    df["ambito"] = df["ambito"].where(df.tipo == "PROCEDIMIENTO", AMB_NO_APLICA)
+    df["estadio"] = estadio_detalle(raw["DX_ESTADIO"]) if "DX_ESTADIO" in raw else "Sin dato"
+    df["estadio_grupo"] = estadio_grupo(df["estadio"]) if "DX_ESTADIO" in raw else "Sin dato"
 
     # catálogos ---------------------------------------------------------
     items = (
@@ -252,9 +294,10 @@ def main(path: str) -> None:
     dxd["etiqueta"] = dxd.cod_dx + " · " + dxd.descripcion
 
     # tabla de hechos ----------------------------------------------------
-    key = ["iafas", "tiempo", "pid", "cod_dx", "item_id", "sexo", "edad_grupo", "departamento", "tipo", "ambito"]
+    key = ["iafas", "tiempo", "pid", "cod_dx", "item_id", "sexo", "edad_grupo", "departamento", "tipo", "ambito", "atencion",
+           "estadio", "estadio_grupo"]
     fact = df.groupby(key, observed=True, as_index=False).agg(gasto=("gasto", "sum"), cantidad=("cantidad", "sum"), lineas=("gasto", "size"))
-    for c in ["iafas", "cod_dx", "sexo", "edad_grupo", "departamento", "tipo", "ambito"]:
+    for c in ["iafas", "cod_dx", "sexo", "edad_grupo", "departamento", "tipo", "ambito", "atencion", "estadio", "estadio_grupo"]:
         fact[c] = fact[c].astype("category")
     fact["pid"] = fact["pid"].astype("int64")
     fact["gasto"] = fact["gasto"].astype("float32")
@@ -265,6 +308,18 @@ def main(path: str) -> None:
     fact.to_parquet(OUT / "fact_iafas.parquet", index=False, compression="zstd")
     items.drop(columns=["cod_digemid"]).to_csv(OUT / "items.csv", index=False)
     dxd.to_csv(OUT / "dx_catalog.csv", index=False)
+
+    # pacientes: mes de deceso (solo el mes, no el día) --------------------
+    if "FEC_DECESO" in raw:
+        fd = pd.to_datetime(raw["FEC_DECESO"], errors="coerce")
+        pac = (pd.DataFrame({"pid": df["pid"], "fd": fd})[lambda x: x.pid >= 0]
+               .groupby("pid")["fd"].min().dt.to_period("M").dt.to_timestamp().rename("mes_deceso").reset_index())
+        pac.to_parquet(OUT / "pacientes.parquet", index=False)
+        corte = fd.max()
+        meta = {"corte_vital": corte.strftime("%Y-%m-%d") if pd.notna(corte) else None,
+                "nota": "Fecha de deceso más reciente registrada en la extracción; se usa como fecha de corte del estado vital."}
+        (OUT / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+        print("pacientes:", len(pac), "| fallecidos:", int(pac.mes_deceso.notna().sum()), "| corte vital:", meta["corte_vital"])
     print("fact:", fact.shape, "| items:", len(items), "| dx:", len(dxd))
     print("gasto total S/ {:,.0f}".format(df.gasto.sum()))
     print(fact.groupby("iafas", observed=True).gasto.sum().round(0))

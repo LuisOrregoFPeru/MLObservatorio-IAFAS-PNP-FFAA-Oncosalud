@@ -38,22 +38,28 @@ TIPO_LIST = ["MEDICAMENTO", "INSUMO", "PROCEDIMIENTO"]
 TIPO_LABEL = {"MEDICAMENTO": "Medicamentos", "INSUMO": "Insumos", "PROCEDIMIENTO": "Procedimientos"}
 EDAD_ORDER = ["0-14", "15-29", "30-44", "45-59", "60-74", "75+", "Sin dato"]
 SD_GROUP = "Sin diagnóstico registrado"
-# Ámbito de atención: clasificación directa (procedimientos) e inferida por paciente-mes (medicamentos e insumos)
+# Servicio del procedimiento según el tarifario INEN (solo procedimientos)
 AMBITO_DIRECTO = ["Consulta externa", "Apoyo al diagnóstico", "Quimioterapia y radioterapia", "Emergencia", "Hospitalización",
                   "Centro quirúrgico", "Procedimientos y terapias ambulatorias", "No clínico"]
-AMBITO_INFERIDO = ["Ambulatorio (inferido)", "Emergencia (inferido)", "Hospitalización (inferido)", "Centro quirúrgico (inferido)",
-                   "Sin procedimiento asociado en el mes"]
-AMBITO_ORDER = AMBITO_DIRECTO + AMBITO_INFERIDO
-# Agrupación para ver todo el consumo con las mismas categorías
-AMBITO_MACRO = {
-    "Consulta externa": "Ambulatorio", "Apoyo al diagnóstico": "Ambulatorio", "Quimioterapia y radioterapia": "Ambulatorio",
-    "Procedimientos y terapias ambulatorias": "Ambulatorio", "Ambulatorio (inferido)": "Ambulatorio",
-    "Emergencia": "Emergencia", "Emergencia (inferido)": "Emergencia",
-    "Hospitalización": "Hospitalización", "Hospitalización (inferido)": "Hospitalización",
-    "Centro quirúrgico": "Centro quirúrgico", "Centro quirúrgico (inferido)": "Centro quirúrgico",
-    "No clínico": "No clínico", "Sin procedimiento asociado en el mes": "Sin procedimiento asociado",
-}
-MACRO_ORDER = ["Ambulatorio", "Emergencia", "Hospitalización", "Centro quirúrgico", "Sin procedimiento asociado", "No clínico"]
+AMB_NO_APLICA = "No aplica (medicamento o insumo)"
+AMBITO_ORDER = AMBITO_DIRECTO + [AMB_NO_APLICA]
+# Tipo de atención registrado por el INEN en cada línea (campo TIPO_ATENCION). Es el dato real; en ambito_macro por compatibilidad.
+ATENCION_SD = "Sin dato (líneas sin paciente)"
+MACRO_ORDER = ["Ambulatorio", "Hospitalización", ATENCION_SD]
+ATENCION_ORDER = MACRO_ORDER
+# Estadío clínico (campo DX_ESTADIO)
+ESTADIO_ORDER = ["0", "I", "II", "III", "IV", "Otro", "Desconocido", "Sin dato"]
+VITAL_ORDER = ["Fallecido", "Vivo a la fecha de corte"]
+PAC_FILE = DATA_DIR / "pacientes.parquet"
+META_FILE = DATA_DIR / "meta.json"
+
+
+def load_meta() -> dict:
+    import json
+    try:
+        return json.loads(META_FILE.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return {}
 
 
 @st.cache_data(show_spinner="Cargando datos de consumo por IAFAS...")
@@ -74,7 +80,23 @@ def load_fact() -> pd.DataFrame:
     df["dx_etiqueta"] = df["cod_dx"].astype(str).map(dxi["etiqueta"]).astype("category")
     df["tiempo"] = pd.to_datetime(df["tiempo"])
     df["anio"] = df["tiempo"].dt.year.astype("int16")
-    df["ambito_macro"] = df["ambito"].astype(str).map(AMBITO_MACRO).astype("category")
+    if "atencion" not in df.columns:      # datos antiguos sin el campo
+        df["atencion"] = ATENCION_SD
+    df["ambito_macro"] = df["atencion"].astype(str).astype("category")
+    for c in ("estadio", "estadio_grupo"):
+        if c not in df.columns:
+            df[c] = "Sin dato"
+        df[c] = df[c].astype(str).astype("category")
+    # Desenlace vital: mes de deceso del paciente y meses entre el consumo y el deceso (0 = mes del deceso)
+    if PAC_FILE.exists():
+        pac = pd.read_parquet(PAC_FILE).set_index("pid")["mes_deceso"]
+        df["mes_deceso"] = pd.to_datetime(df["pid"].map(pac))
+    else:
+        df["mes_deceso"] = pd.NaT
+    md = df["mes_deceso"]
+    df["meses_al_deceso"] = ((md.dt.year - df["tiempo"].dt.year) * 12 + (md.dt.month - df["tiempo"].dt.month)).astype("Int16")
+    df["condicion_vital"] = np.where(md.notna(), "Fallecido", np.where(df["pid"] >= 0, "Vivo a la fecha de corte", "Sin paciente"))
+    df["condicion_vital"] = df["condicion_vital"].astype("category")
     return df
 
 
@@ -103,7 +125,7 @@ def load_afiliados() -> pd.DataFrame:
 def apply_filters(
     df: pd.DataFrame, *, iafas=None, tipos=None, date_lo=None, date_hi=None,
     dx_grupos=None, sexo=None, edad=None, deptos=None, excluir_sd: bool = False,
-    excluir_anios=None, ambitos=None,
+    excluir_anios=None, ambitos=None, atencion=None, estadios=None, vital=None,
 ) -> pd.DataFrame:
     m = pd.Series(True, index=df.index)
     if iafas:
@@ -128,6 +150,12 @@ def apply_filters(
         m &= df["ambito"].isin(ambitos)
     if excluir_anios:
         m &= ~df["anio"].isin(excluir_anios)
+    if atencion:
+        m &= df["atencion"].isin(atencion)
+    if estadios:
+        m &= df["estadio_grupo"].isin(estadios)
+    if vital:
+        m &= df["condicion_vital"].isin(vital)
     return df[m]
 
 

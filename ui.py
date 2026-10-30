@@ -27,8 +27,10 @@ OK = "#2F9E44"
 WARN = "#E8A33D"
 BAD = "#C94141"
 PALETTE = [PRIMARY, SECONDARY, OK, "#8850C4", "#C9A13B", "#5C6AC4", "#7D7D7D", "#4AA8C9", "#B5446E", "#3F8F7B"]
-MACRO_COLOR = {"Ambulatorio": PRIMARY, "Emergencia": BAD, "Hospitalización": SECONDARY, "Centro quirúrgico": "#8850C4",
-               "Sin procedimiento asociado": "#B0B0B0", "No clínico": "#7D7D7D"}
+MACRO_COLOR = {"Ambulatorio": PRIMARY, "Hospitalización": SECONDARY, "Sin dato (líneas sin paciente)": "#B0B0B0"}
+ESTADIO_COLOR = {"0": "#9BC1E0", "I": "#4AA8C9", "II": PRIMARY, "III": "#E8A33D", "IV": BAD, "Otro": "#8850C4",
+                 "Desconocido": "#9A9A9A", "Sin dato": "#C8C8C8"}
+VITAL_COLOR = {"Fallecido": "#5A5A5A", "Vivo a la fecha de corte": PRIMARY}
 TIPO_COLOR = {"MEDICAMENTO": PRIMARY, "INSUMO": OK, "PROCEDIMIENTO": SECONDARY}
 
 CSS = f"""
@@ -55,6 +57,16 @@ CSS = f"""
                       padding: 1rem 1.2rem; margin-top: 1.2rem; font-size: 0.85rem; color: #333; }}
     .citation-box h4 {{ margin: 0 0 0.5rem 0; font-size: 0.8rem; letter-spacing: 0.04em; color: {ACCENT}; }}
     .citation-box p {{ margin: 0 0 0.6rem 0; line-height: 1.5; }}
+    .asist-eval {{ display: flex; align-items: center; gap: .45rem; font-size: .82rem; color: #555; margin: .1rem 0 .35rem 0; }}
+    .asist-dot {{ width: 9px; height: 9px; border-radius: 50%; flex: 0 0 9px; }}
+    .asist-aviso {{ font-size: .78rem; color: #6b4e12; background: #fff8ec; border-radius: 6px; padding: .3rem .5rem; margin: .3rem 0; }}
+    .asist-lectura {{ font-size: .76rem; color: #6b7280; margin: .25rem 0 .45rem 0; }}
+    .asist-sug {{ font-size: .84rem; color: {ACCENT}; background: #eef3f9; border-radius: 8px; padding: .45rem .6rem; margin: .3rem 0; }}
+    .asist-sug span {{ font-size: .74rem; color: #6b7280; }}
+    .st-key-asist_ejs, .st-key-asist_ejs2 {{ gap: .15rem; }}
+    .asist-ej-tit {{ font-size: .78rem; color: #6b7280; margin: .5rem 0 0 0; }}
+    button[kind="tertiary"] {{ justify-content: flex-start; text-align: left; padding: .1rem 0; min-height: 0; }}
+    button[kind="tertiary"] p {{ font-size: .82rem; color: {PRIMARY}; font-style: italic; }}
     .asist-q {{ background: #eef3f9; border-radius: 8px; padding: .45rem .7rem; margin: .4rem 0 .3rem 0; font-size: .88rem; color: {ACCENT}; font-weight: 600; }}
 </style>
 """

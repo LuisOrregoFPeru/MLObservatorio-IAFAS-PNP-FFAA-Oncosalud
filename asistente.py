@@ -24,7 +24,7 @@ import pandas as pd
 import streamlit as st
 
 from data_processing import SD_GROUP, TIPO_LABEL
-from ui import STRETCH, mes, num
+from ui import _V, STRETCH, mes, num
 
 DEFAULT_MODEL = "claude-sonnet-5-5"
 MAX_ROWS_LLM = 40          # filas máximas que se devuelven al modelo por consulta
@@ -34,13 +34,14 @@ MAX_TOOL_ROUNDS = 6
 DIMS = {
     "iafas": "iafas", "anio": "anio", "mes": "tiempo", "tipo": "tipo", "dx_grupo": "dx_grupo",
     "diagnostico": "dx_etiqueta", "item": "descripcion", "principio_activo": "principio_activo",
-    "ambito": "ambito", "ambito_macro": "ambito_macro", "grupo_tarifario": "grupo_tarifario",
+    "servicio": "ambito", "tipo_atencion": "atencion", "estadio": "estadio_grupo", "condicion_vital": "condicion_vital",
+    "grupo_tarifario": "grupo_tarifario",
     "sexo": "sexo", "edad_grupo": "edad_grupo", "departamento": "departamento", "alto_costo": "alto_costo",
 }
 DIM_LABEL = {
     "iafas": "IAFAS", "anio": "Año", "mes": "Mes", "tipo": "Tipo de consumo", "dx_grupo": "Grupo de diagnóstico",
-    "diagnostico": "Diagnóstico (CIE-10)", "item": "Ítem", "principio_activo": "Principio activo", "ambito": "Ámbito",
-    "ambito_macro": "Ámbito (agrupado)", "grupo_tarifario": "Grupo del tarifario", "sexo": "Sexo",
+    "diagnostico": "Diagnóstico (CIE-10)", "item": "Ítem", "principio_activo": "Principio activo", "servicio": "Servicio del procedimiento",
+    "tipo_atencion": "Tipo de atención", "estadio": "Estadío", "condicion_vital": "Condición vital", "grupo_tarifario": "Grupo del tarifario", "sexo": "Sexo",
     "edad_grupo": "Grupo etario", "departamento": "Departamento", "alto_costo": "Alto costo",
 }
 METRICS = {
@@ -78,7 +79,9 @@ TOOL = {
                     "sexo": {"type": "array", "items": {"type": "string"}},
                     "edad_grupo": {"type": "array", "items": {"type": "string"}},
                     "departamento": {"type": "array", "items": {"type": "string"}},
-                    "ambito_macro": {"type": "array", "items": {"type": "string"}},
+                    "tipo_atencion": {"type": "array", "items": {"type": "string"}, "description": "Ambulatorio u Hospitalización (dato registrado)."},
+                    "estadio": {"type": "array", "items": {"type": "string"}, "description": "Estadío agrupado: 0, I, II, III, IV, Desconocido, Sin dato."},
+                    "condicion_vital": {"type": "array", "items": {"type": "string"}, "description": "Fallecido o Vivo a la fecha de corte."},
                     "grupo_tarifario": {"type": "array", "items": {"type": "string"}},
                     "solo_alto_costo": {"type": "boolean", "description": "Solo medicamentos de la lista de alto costo no PNUME."},
                     "excluir_sin_diagnostico": {"type": "boolean"},
@@ -120,7 +123,8 @@ def consultar(df: pd.DataFrame, spec: dict) -> tuple[pd.DataFrame, dict]:
     m = pd.Series(True, index=df.index)
     aplicados = []
     for key, col in (("iafas", "iafas"), ("tipo", "tipo"), ("dx_grupo", "dx_grupo"), ("sexo", "sexo"),
-                     ("edad_grupo", "edad_grupo"), ("departamento", "departamento"), ("ambito_macro", "ambito_macro"),
+                     ("edad_grupo", "edad_grupo"), ("departamento", "departamento"), ("tipo_atencion", "atencion"),
+                     ("estadio", "estadio_grupo"), ("condicion_vital", "condicion_vital"),
                      ("grupo_tarifario", "grupo_tarifario")):
         if f.get(key):
             vals = _match_values(df[col], f[key])
@@ -230,12 +234,18 @@ Datos disponibles: consumo facturado por el INEN a las IAFAS, serie mensual {mes
 Cada línea es un medicamento, insumo o procedimiento. Gasto = cantidad × precio (S/), es el siniestro incurrido por la IAFAS en el INEN,
 no incluye lo que paga a otros prestadores. Paciente = identificador seudonimizado (no hay DNI). Los pacientes únicos no se suman entre filas.
 El último mes puede estar incompleto por rezago de facturación; 2026 no es un año completo.
+El tipo de atención (ambulatorio u hospitalizado) es el registrado por el INEN en cada línea. El estadío se compara bien solo dentro de un mismo
+tipo de cáncer. La condición vital viene de la fecha de deceso; un paciente sin fecha cuenta como vivo al corte. «Pacientes» con condición Fallecido
+cuenta personas fallecidas, no muertes ocurridas en un periodo.
 
 Valores válidos:
 - IAFAS: {vals('iafas')}
 - Tipo: MEDICAMENTO, INSUMO, PROCEDIMIENTO
 - Grupos de diagnóstico: {vals('dx_grupo')}
-- Ámbito agrupado: {vals('ambito_macro')}
+- Tipo de atención (registrado por el INEN en cada línea): {vals('atencion')}
+- Estadío agrupado: {vals('estadio_grupo')} (Desconocido = registrado como desconocido; varía según el tipo de cáncer)
+- Condición vital del paciente: {vals('condicion_vital')} (según la fecha de deceso; el estado vital está al corte de la extracción)
+- Servicio del procedimiento (tarifario, solo procedimientos): {vals('ambito')}
 - Sexo: {vals('sexo')} · Grupo etario: {vals('edad_grupo')}
 - Departamentos: {vals('departamento', 30)}
 
@@ -307,7 +317,10 @@ _DIM_WORDS = [  # (patrón, dimensión) en orden de prioridad
     (r"medicamento|farmaco|insumo|procedimiento|item|producto", "item"),
     (r"grupo de diagnostico|tipo de cancer|sitio tumoral|por cancer|por diagnostico", "dx_grupo"),
     (r"\bcie\b|cie-?10|codigo de diagnostico|diagnosticos especificos", "diagnostico"),
-    (r"ambito|hospitaliza|emergencia|ambulatori|quirurgic", "ambito_macro"), (r"tarifario", "grupo_tarifario"),
+    (r"tipo de atencion|hospitalizado.{0,12}ambulatori|ambulatori.{0,12}hospitaliz|ambito", "tipo_atencion"),
+    (r"por servicio|emergencia|quirurgic|consulta externa|apoyo al diagnostico", "servicio"), (r"tarifario", "grupo_tarifario"),
+    (r"por estadio|segun estadio|cada estadio|estadios", "estadio"),
+    (r"condicion vital|vivos y fallecidos|fallecidos y vivos|vivos vs|fallecidos vs", "condicion_vital"),
     (r"sexo|hombres|mujeres|genero", "sexo"), (r"edad|etario", "edad_grupo"),
     (r"departamento|region|residencia", "departamento"), (r"por tipo|tipo de consumo", "tipo"),
 ]
@@ -347,6 +360,21 @@ def interpretar(df: pd.DataFrame, q: str) -> dict:
            and any(re.search(rf"\b{w[:-1] if len(w) > 5 else w}", n) for w in re.findall(r"[a-z]{4,}", _norm(g)) if w not in _stop)]
     if dxg and not re.search(r"por (grupo de )?diagnostico|tipo de cancer", n):
         f["dx_grupo"] = dxg
+    # tipo de atención, estadío y condición vital como filtro (si no se pide como desglose)
+    if not re.search(r"tipo de atencion|hospitalizado.{0,12}ambulatori|ambulatori.{0,12}hospitaliz|compar", n):
+        if re.search(r"hospitaliz", n):
+            f["tipo_atencion"] = ["Hospitalización"]
+        elif re.search(r"ambulatori", n):
+            f["tipo_atencion"] = ["Ambulatorio"]
+    me = re.findall(r"estadio\s+(iv|iii|ii|i|0|[0-4])\b", n)
+    if me:
+        rom = {"0": "0", "1": "I", "2": "II", "3": "III", "4": "IV"}
+        f["estadio"] = sorted({rom.get(x, x.upper()) for x in me})
+    if not re.search(r"condicion vital|vivos y fallecidos|fallecidos y vivos|vivos vs|fallecidos vs", n):
+        if re.search(r"fallecid|murieron|deceso|difunt", n):
+            f["condicion_vital"] = ["Fallecido"]
+        elif re.search(r"\bvivos\b|sobrevivientes", n):
+            f["condicion_vital"] = ["Vivo a la fecha de corte"]
     # sexo / departamento
     if re.search(r"\bmujeres\b|femenin", n) and "sexo" not in n:
         f["sexo"] = [s for s in df["sexo"].astype(str).unique() if _norm(s).startswith(("f", "muj"))]
@@ -361,7 +389,7 @@ def interpretar(df: pd.DataFrame, q: str) -> dict:
         cand = mt.group(1).strip()
         stop = {"medicamentos", "insumos", "procedimientos", "la iafas", "las iafas", "cada iafas", "alto costo", "pacientes", "oncosalud", "saludpol"}
         dx_words = {w for g in f.get("dx_grupo", []) for w in re.findall(r"[a-z]{4,}", _norm(g))}
-        if re.search(r"cancer|tumor|neoplasia|diagnostico", cand) or any(w[:5] in cand for w in dx_words):
+        if re.search(r"cancer|tumor|neoplasia|diagnostico|hospitaliz|ambulatori|fallec|vivos|estadio|deceso|atencion", cand) or any(w[:5] in cand for w in dx_words):
             cand = ""
         if cand and cand not in stop and not any(cand.startswith(s) for s in ("medicament", "insumo", "procedim", "los ", "las ", "la ", "el ")):
             if _contains(df["descripcion"], cand).any() or _contains(df["principio_activo"], cand).any():
@@ -371,7 +399,7 @@ def interpretar(df: pd.DataFrame, q: str) -> dict:
         metrica = "gasto_por_paciente"
     elif re.search(r"precio", n):
         metrica = "precio_medio"
-    elif re.search(r"cuantos pacientes|numero de pacientes|pacientes unicos|pacientes atendidos|\bpacientes\b", n) and "gasto" not in n:
+    elif re.search(r"cuantos pacientes|numero de pacientes|pacientes unicos|pacientes atendidos|\bpacientes\b|cuantos (fallecid|murieron)", n) and "gasto" not in n:
         metrica = "pacientes"
     elif re.search(r"cantidad|unidades|cuantas unidades", n):
         metrica = "cantidad"
@@ -387,7 +415,7 @@ def interpretar(df: pd.DataFrame, q: str) -> dict:
                 continue
             if d == "item" and not re.search(r"top|mas|mayor|principales|ranking|cuales|que (medicamentos|insumos|procedimientos)|lista", n):
                 continue
-            if d == "ambito_macro" and "ambito_macro" in f:
+            if d in ("tipo_atencion", "estadio", "condicion_vital") and d in f:
                 continue
             if d == "iafas" and len(f.get("iafas", [])) == 1:
                 continue
@@ -450,9 +478,22 @@ EJEMPLOS = [
     "Top 10 medicamentos de SALUDPOL en 2025",
     "Evolución anual del gasto de ONCOSALUD",
     "¿Cuántos pacientes por grupo de diagnóstico en FF.AA.?",
-    "Gasto por paciente según ámbito en 2024",
+    "Gasto por paciente según tipo de atención en 2024",
+    "¿Cuántos pacientes fallecidos por estadío en SALUDPOL?",
     "Medicamentos de alto costo por IAFAS",
 ]
+
+
+# Botón con aspecto de texto/enlace (type="tertiary" existe desde Streamlit 1.42)
+_BTN_TEXTO = {"type": "tertiary"} if _V >= (1, 42) else {}
+
+
+def _caja(key: str):
+    """Contenedor con clave CSS cuando la versión lo permite."""
+    try:
+        return st.container(key=key)
+    except TypeError:
+        return st.container()
 
 
 def _grafico(tb: pd.DataFrame, height: int = 200):
@@ -483,7 +524,8 @@ def _tabla(tb: pd.DataFrame, height: int | None = None):
     for c in tb.columns:
         if pd.api.types.is_numeric_dtype(tb[c]) and c not in ("Año",):
             fm[c] = (lambda v: num(v, 1)) if c == "% del total" else (lambda v: num(v, 0))
-    st.dataframe(tb.style.format(fm, na_rep="—"), hide_index=True, **STRETCH, height=height or "auto")
+    kw = {"height": int(height)} if height else {}   # height="auto" solo existe en Streamlit >= 1.50
+    st.dataframe(tb.style.format(fm, na_rep="—"), hide_index=True, **STRETCH, **kw)
 
 
 @st.dialog("Resultado de la consulta", width="large")
@@ -498,42 +540,215 @@ def _ampliar(i: int):
                            file_name="consulta_asistente_iafas.csv", mime="text/csv", key=f"asist_dl_{i}")
 
 
+# ---------------------------------------------------------------------------
+# Evaluador de la pregunta (al estilo Elicit): revisa qué elementos trae la pregunta y sugiere cómo precisarla
+# ---------------------------------------------------------------------------
+_RX_METRICA = r"gast|costo|coste|pacientes|cantidad|unidades|precio|lineas|atenciones|consumo|monto|soles"
+_RX_PERIODO = r"\b20[12]\d\b|por mes|mensual|por ano|anual|evolucion|tendencia|ultimo ano|este ano|ultimos? \d+ (anos|meses)"
+_RX_FOCO = r"medicament|farmaco|insumo|procedimiento|alto costo|diagnostic|cancer|tumor|neoplasia|cie|hospitaliza|emergencia|ambulatori|quirurgic|estadio|fallec|deceso|murieron"
+_RX_FUERA = r"por que|porque|causa|motivo|razon|predic|proyecc|proyect|pronostic|futuro|2027|2028|2029|2030"
+
+
+def _ultimo_anio_completo(df: pd.DataFrame) -> int:
+    um = df["tiempo"].max()
+    return int(um.year if um.month == 12 else um.year - 1)
+
+
+def _insertar(q: str, frag: str) -> str:
+    """Añade un fragmento al final de la pregunta, antes del signo de cierre."""
+    q = q.rstrip()
+    m = re.search(r"[?.!]+$", q)
+    return (q[:m.start()] + frag + m.group(0)) if m else (q + frag)
+
+
+def evaluar(df: pd.DataFrame, q: str, spec: dict | None = None) -> dict:
+    """Devuelve los elementos presentes/ausentes, avisos y una lectura de cómo se interpretará la pregunta."""
+    n = _norm(q)
+    spec = spec or interpretar(df, q)
+    f, dims = spec.get("filtros", {}), spec.get("agrupar_por", [])
+    anio = _ultimo_anio_completo(df) if len(df) else 2025
+    top_iafas = (df.groupby("iafas", observed=True)["gasto"].sum().idxmax() if len(df) else "SALUDPOL")
+    top_iafas = str(top_iafas).split(" (")[0]
+    desg = " por medicamento" if f.get("dx_grupo") else " por grupo de diagnóstico"
+    elem = [  # (clave, etiqueta del chip, ¿presente?, fragmento sugerido, ayuda)
+        ("metrica", "Métrica", bool(re.search(_RX_METRICA, n)), " (gasto por paciente)",
+         "Qué medir: gasto, pacientes, cantidad o gasto por paciente."),
+        ("iafas", "IAFAS", bool(f.get("iafas")) or "iafas" in dims, f" en {top_iafas}",
+         "A quién se refiere: una IAFAS concreta o la comparación entre IAFAS."),
+        ("periodo", "Periodo", bool(f.get("anio_desde") or f.get("mes_desde") or re.search(_RX_PERIODO, n)), f" en {anio}",
+         "Cuándo: un año, un rango o la evolución en el tiempo."),
+        ("foco", "Foco", bool(f.get("tipo") or f.get("dx_grupo") or f.get("item_texto") or f.get("solo_alto_costo")
+                              or re.search(_RX_FOCO, n)), " en medicamentos",
+         "Qué parte del consumo: medicamentos, insumos, procedimientos, un diagnóstico o un fármaco."),
+        ("desglose", "Desglose", bool(dims), desg,
+         "Cómo abrir el resultado: por diagnóstico, por ítem, por ámbito, por año…"),
+    ]
+    faltan = [e for e in elem if not e[2]]
+    avisos = []
+    anios = {int(a) for a in re.findall(r"\b(20[12]\d)\b", n)}
+    if len(df) and anios:
+        lo, hi = int(df["tiempo"].min().year), int(df["tiempo"].max().year)
+        fuera = sorted(a for a in anios if a < lo or a > hi)
+        if fuera:
+            avisos.append(f"No hay datos para {', '.join(map(str, fuera))}; la serie cubre {lo} a {hi}.")
+        um = df["tiempo"].max()
+        if um.year in anios and um.month < 12:
+            avisos.append(f"{um.year} está incompleto (datos hasta {mes(um)}); para comparar años usa años completos.")
+    if re.search(_RX_FUERA, n):
+        avisos.append("Los datos describen el consumo facturado; no explican causas ni proyectan a futuro. "
+                      "Para eso revisa las pestañas Tendencias y Proyecciones.")
+    # Lectura de la pregunta
+    partes = [METRICS.get(spec.get("metrica", "gasto"), "Gasto")]
+    if f.get("iafas"):
+        partes.append(", ".join(str(x).split(" (")[0] for x in f["iafas"]))
+    if f.get("anio_desde") or f.get("anio_hasta"):
+        a, b = f.get("anio_desde"), f.get("anio_hasta")
+        partes.append(str(a) if a == b else f"{a or '…'} a {b or '…'}")
+    if f.get("tipo"):
+        partes.append(", ".join(TIPO_LABEL.get(t, t).lower() for t in f["tipo"]))
+    if f.get("dx_grupo"):
+        partes.append(", ".join(f["dx_grupo"][:2]) + ("…" if len(f["dx_grupo"]) > 2 else ""))
+    if f.get("item_texto"):
+        partes.append(f"«{f['item_texto']}»")
+    if f.get("solo_alto_costo"):
+        partes.append("alto costo")
+    for k_ in ("tipo_atencion", "estadio", "condicion_vital"):
+        if f.get(k_):
+            partes.append(("estadío " if k_ == "estadio" else "") + ", ".join(map(str, f[k_])).lower())
+    if dims:
+        partes.append("por " + " y ".join(DIM_LABEL[d].lower() for d in dims))
+    n_ok = len(elem) - len(faltan)
+    nivel = "ok" if n_ok >= 4 else ("medio" if n_ok >= 2 else "bajo")
+    return {"nivel": nivel, "faltan": faltan, "avisos": avisos, "lectura": " · ".join(partes), "n_ok": n_ok}
+
+
+def reformular_llm(df: pd.DataFrame, q: str, key: str) -> dict:
+    """Pide a Claude una versión más precisa de la pregunta (sin ejecutar consultas)."""
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=key)
+    instr = ("Tarea: el usuario escribió una pregunta para consultar estos datos. Propón UNA versión más precisa y respondible "
+             "con los datos disponibles (métrica, IAFAS, periodo, foco y desglose cuando tenga sentido), sin cambiar su intención. "
+             "Si la pregunta pide causas o proyecciones, reorienta hacia lo que los datos sí muestran. Responde solo con JSON: "
+             '{"pregunta": "...", "motivo": "una frase breve sobre qué se precisó"}')
+    r = client.messages.create(model=_modelo(), max_tokens=300, system=_contexto(df) + "\n" + instr,
+                               messages=[{"role": "user", "content": q}])
+    txt = "".join(b.text for b in r.content if b.type == "text")
+    m = re.search(r"\{.*\}", txt, re.S)
+    out = json.loads(m.group(0)) if m else {}
+    return {"pregunta": str(out.get("pregunta", "")).strip(), "motivo": str(out.get("motivo", "")).strip()}
+
+
+# Callbacks (modifican el estado antes de que se dibujen los widgets)
+def _cb_enviar():
+    q = (st.session_state.get("asist_q") or "").strip()
+    if q:
+        st.session_state["asist_run"] = q
+    st.session_state["asist_q"] = ""
+    st.session_state.pop("asist_sug", None)
+
+
+def _cb_limpiar():
+    st.session_state["asist_hist"] = []
+    st.session_state["asist_q"] = ""
+    st.session_state.pop("asist_sug", None)
+
+
+def _cb_ejemplo(txt: str):
+    st.session_state["asist_run"] = txt
+    st.session_state["asist_q"] = ""
+    st.session_state.pop("asist_sug", None)
+
+
+def _cb_chip(frags: dict):
+    sel = st.session_state.get("asist_chip")
+    if sel and sel in frags:
+        st.session_state["asist_q"] = _insertar(st.session_state.get("asist_q") or "", frags[sel])
+    st.session_state["asist_chip"] = None
+
+
+def _cb_usar_sug():
+    sug = st.session_state.pop("asist_sug", None)
+    if sug and sug.get("pregunta"):
+        st.session_state["asist_q"] = sug["pregunta"]
+
+
+_DOT = {"ok": ("#2F9E44", "Pregunta precisa. Puedes consultar."),
+        "medio": ("#E8A33D", "Las preguntas más precisas funcionan mejor. Prueba añadir:"),
+        "bajo": ("#C94141", "Pregunta muy general. Prueba añadir:")}
+
+
+def _panel_evaluacion(base: pd.DataFrame, q: str, key: str | None):
+    ev = evaluar(base, q)
+    color, msg = _DOT[ev["nivel"]]
+    st.markdown(f"<div class='asist-eval'><span class='asist-dot' style='background:{color}'></span>{msg}</div>",
+                unsafe_allow_html=True)
+    if ev["faltan"]:
+        frags = {e[1]: e[3] for e in ev["faltan"]}
+        st.pills("Elementos sugeridos", list(frags), selection_mode="single", key="asist_chip",
+                 label_visibility="collapsed", on_change=_cb_chip, args=(frags,),
+                 help="Al tocar uno se añade un ejemplo a tu pregunta, que puedes editar. "
+                      + " ".join(f"{e[1]}: {e[4]}" for e in ev["faltan"]))
+    for a in ev["avisos"]:
+        st.markdown(f"<div class='asist-aviso'>⚠️ {a}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='asist-lectura'>{'Lectura preliminar' if key else 'Así la entiendo'}: {ev['lectura']}</div>",
+                unsafe_allow_html=True)
+    if key and ev["nivel"] != "ok":
+        if st.button("✨ Mejorar la pregunta con IA", key="asist_refine", **STRETCH):
+            with st.spinner("Reformulando…"):
+                try:
+                    st.session_state["asist_sug"] = {**reformular_llm(base, q, key), "origen": q}
+                except Exception as e:  # noqa: BLE001
+                    st.session_state["asist_sug"] = {"pregunta": "", "motivo": f"No se pudo reformular: {e}", "origen": q}
+    sug = st.session_state.get("asist_sug")
+    if sug and sug.get("origen") == q:
+        if sug.get("pregunta"):
+            st.markdown(f"<div class='asist-sug'>💡 {sug['pregunta']}<br><span>{sug.get('motivo', '')}</span></div>",
+                        unsafe_allow_html=True)
+            st.button("Usar esta versión", key="asist_usar", on_click=_cb_usar_sug, **STRETCH)
+        else:
+            st.caption(sug.get("motivo", ""))
+
+
 def render(df_filtrado: pd.DataFrame, df_total: pd.DataFrame):
     """Dibuja el asistente. Debe llamarse dentro del contexto de la barra lateral."""
     st.session_state.setdefault("asist_hist", [])
+    st.session_state.setdefault("asist_q", "")
     with st.expander("💬 Pregunta a los datos", expanded=True):
         key = _api_key()
         usar_flt = st.toggle("Aplicar los filtros del panel", value=True, key="asist_flt",
                              help="Si está activo, el asistente responde sobre la selección actual (meses, tipo, diagnóstico, demografía).")
-        with st.form("asist_form", clear_on_submit=True, border=False):
-            q = st.text_area("Tu pregunta", placeholder="Ej.: ¿qué medicamentos explican más gasto en SALUDPOL en 2025?",
-                             height=80, label_visibility="collapsed")
-            c1, c2 = st.columns([1, 1])
-            enviar = c1.form_submit_button("Consultar", type="primary", **STRETCH)
-            borrar = c2.form_submit_button("Limpiar", **STRETCH)
-        ej = st.selectbox("Ejemplos", ["Elige un ejemplo…"] + EJEMPLOS, index=0, key="asist_ej", label_visibility="collapsed")
-        if borrar:
-            st.session_state["asist_hist"] = []
-        pregunta = (q or "").strip()
-        if not pregunta and ej != "Elige un ejemplo…" and st.session_state.get("asist_ej_prev") != ej:
-            pregunta = ej
-        st.session_state["asist_ej_prev"] = ej
-
         base = df_filtrado if usar_flt else df_total
-        if enviar or pregunta:
-            if pregunta:
-                with st.spinner("Consultando…"):
-                    try:
-                        if key:
-                            a, tb, spec = responder_llm(base, pregunta, st.session_state["asist_hist"], key)
-                            modo = "IA"
-                        else:
-                            spec = interpretar(base, pregunta)
-                            tb, rs = consultar(base, spec)
-                            a, modo = describir(tb, rs), "básico"
-                    except Exception as e:  # noqa: BLE001
-                        a, tb, spec, modo = f"No se pudo completar la consulta: {e}", pd.DataFrame(), None, "error"
-                st.session_state["asist_hist"].append({"q": pregunta, "a": a, "tabla": tb, "spec": spec, "modo": modo})
+        st.text_area("Tu pregunta", key="asist_q", height=80, label_visibility="collapsed",
+                     placeholder="Ej.: ¿qué medicamentos explican más gasto en SALUDPOL en 2025?",
+                     help="Pulsa Ctrl+Enter para revisar la pregunta antes de consultar.")
+        q_actual = (st.session_state.get("asist_q") or "").strip()
+        if q_actual and len(base):
+            _panel_evaluacion(base, q_actual, key)
+        c1, c2 = st.columns([1, 1])
+        c1.button("Consultar", type="primary", on_click=_cb_enviar, key="asist_send", **STRETCH)
+        c2.button("Limpiar", on_click=_cb_limpiar, key="asist_clear", **STRETCH)
+
+        pregunta = st.session_state.pop("asist_run", None)
+        if pregunta:
+            with st.spinner("Consultando…"):
+                try:
+                    if key:
+                        a, tb, spec = responder_llm(base, pregunta, st.session_state["asist_hist"], key)
+                        modo = "IA"
+                    else:
+                        spec = interpretar(base, pregunta)
+                        tb, rs = consultar(base, spec)
+                        a, modo = describir(tb, rs), "básico"
+                except Exception as e:  # noqa: BLE001
+                    a, tb, spec, modo = f"No se pudo completar la consulta: {e}", pd.DataFrame(), None, "error"
+            st.session_state["asist_hist"].append({"q": pregunta, "a": a, "tabla": tb, "spec": spec, "modo": modo})
+
+        if not st.session_state["asist_hist"] and not q_actual:
+            st.markdown("<div class='asist-ej-tit'>Ejemplos de preguntas (tócalos para consultar)</div>", unsafe_allow_html=True)
+            with _caja("asist_ejs"):
+                for i, ej in enumerate(EJEMPLOS):
+                    st.button(ej, key=f"asist_ej_{i}", on_click=_cb_ejemplo, args=(ej,), **_BTN_TEXTO)
 
         hist = st.session_state["asist_hist"]
         if hist:
@@ -555,6 +770,9 @@ def render(df_filtrado: pd.DataFrame, df_total: pd.DataFrame):
                         st.markdown(f"**{hist[j]['q']}**")
                         st.markdown(hist[j]["a"])
                         st.divider()
+            with st.popover("Ejemplos de preguntas", **STRETCH), _caja("asist_ejs2"):
+                for k, ej in enumerate(EJEMPLOS):
+                    st.button(ej, key=f"asist_ej2_{k}", on_click=_cb_ejemplo, args=(ej,), **_BTN_TEXTO)
 
         st.caption(("🟢 Modo IA activo (Claude). " if key else "⚪ Modo básico por reglas. ")
                    + "Las cifras salen de agregaciones sobre los datos del observatorio; al modelo solo se envían tablas resumidas, sin identificadores.")

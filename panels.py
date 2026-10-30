@@ -9,7 +9,7 @@ import streamlit as st
 from plotly.subplots import make_subplots
 
 from data_processing import (
-    AMBITO_DIRECTO, MACRO_ORDER, EDAD_ORDER, SD_GROUP, TIPO_LABEL, annual_metrics, month_index, monthly_metrics, patient_table, top_table,
+    AMBITO_DIRECTO, ATENCION_SD, MACRO_ORDER, EDAD_ORDER, SD_GROUP, TIPO_LABEL, annual_metrics, month_index, monthly_metrics, patient_table, top_table,
 )
 from stats_analysis import (
     smooth_series, abc_classification, cagr, chow_test_event, detect_breakpoint_auto, linear_trend, mann_kendall_trend,
@@ -171,7 +171,7 @@ def dx_structure_chart(d: pd.DataFrame, col: str, topn: int, key: str, titulo: s
     if d.empty:
         st.info("Sin datos en la selección.")
         return
-    vista = st.radio("Distribuir el gasto de cada diagnóstico por", ["Tipo de consumo", "Ámbito de atención"], horizontal=True, key=f"{key}_vista")
+    vista = st.radio("Distribuir el gasto de cada diagnóstico por", ["Tipo de consumo", "Tipo de atención"], horizontal=True, key=f"{key}_vista")
     top = d.groupby(col, observed=True)["gasto"].sum().sort_values(ascending=False).head(topn).index.tolist()
     dd = d[d[col].isin(top)]
     if vista.startswith("Tipo"):
@@ -1031,7 +1031,7 @@ _PER_KEY = {"Mensual": "M", "Trimestral": "Q", "Anual": "Y"}
 # ---------------------------------------------------------------------------
 
 def panel_ambito(d: pd.DataFrame, name: str, idx: pd.DatetimeIndex, o: Opts) -> None:
-    vista = st.radio("Vista", ["Todo el consumo (agrupado)", "Solo procedimientos (clasificación directa)"], horizontal=True, key=f"{name}_amb_v")
+    vista = st.radio("Vista", ["Todo el consumo: tipo de atención registrado", "Solo procedimientos: servicio del tarifario"], horizontal=True, key=f"{name}_amb_v")
     directo = vista.startswith("Solo")
     dd = d[d["tipo"] == "PROCEDIMIENTO"] if directo else d
     if dd.empty:
@@ -1057,25 +1057,28 @@ def panel_ambito(d: pd.DataFrame, name: str, idx: pd.DatetimeIndex, o: Opts) -> 
         hosp = g["pct"].get("Hospitalización", 0.0)
         cons = g["pct"].get("Consulta externa", 0.0)
         emer = g["pct"].get("Emergencia", 0.0)
-        txt = (f"En procedimientos, <b>{lead}</b> es el ámbito de mayor gasto ({pct(g.loc[lead, 'pct'])}). El apoyo al diagnóstico "
+        txt = (f"En procedimientos, <b>{lead}</b> es el servicio de mayor gasto ({pct(g.loc[lead, 'pct'])}). El apoyo al diagnóstico "
                f"(laboratorio, imágenes, patología) pesa {pct(apoyo)}, la hospitalización {pct(hosp)}, la consulta externa {pct(cons)} y la emergencia {pct(emer)}. "
-               "La clasificación sale del grupo del tarifario INEN al que pertenece el código del procedimiento facturado, por lo que es directa y no depende de supuestos.")
+               "El servicio sale del grupo del tarifario INEN al que pertenece el código facturado. Describe qué se hizo; si el paciente estaba hospitalizado o no lo indica el tipo de atención (vista anterior).")
     else:
-        inf = dd[dd["tipo"] != "PROCEDIMIENTO"]["gasto"].sum() / tot * 100 if tot else 0
-        txt = (f"<b>{lead}</b> concentra {pct(g.loc[lead, 'pct'])} del gasto de {name}. Los procedimientos se clasifican por el grupo del tarifario INEN de su código; "
-               f"los medicamentos e insumos ({pct(inf)} del gasto) no traen ámbito en la extracción y se asignan según los procedimientos "
-               "del mismo paciente en el mismo mes (hospitalización si hubo días de hospitalización o UCI, si no emergencia, si no quirúrgico, si no ambulatorio). "
-               "Es una inferencia a nivel paciente-mes: un paciente hospitalizado unos días y con quimioterapia ambulatoria el mismo mes pasa todo su consumo de fármacos a hospitalización.")
+        hosp = g["pct"].get("Hospitalización", 0.0)
+        sd = g["pct"].get(ATENCION_SD, 0.0)
+        amb_ = g["pct"].get("Ambulatorio", 0.0)
+        hosp_id = hosp / (hosp + amb_) * 100 if (hosp + amb_) else np.nan
+        txt = (f"La atención hospitalaria suma {pct(hosp)} del gasto de {name} y la ambulatoria {pct(amb_)}. Entre las líneas con paciente identificado, "
+               f"<b>{pct(hosp_id)} del gasto es hospitalario</b>. "
+               "El tipo de atención es el que registra el INEN en cada línea facturada (ambulatorio u hospitalizado), por lo que ya no depende de supuestos. "
+               + (f"Las líneas sin paciente identificado no traen el campo ({pct(sd)} del gasto)." if sd >= 0.05 else ""))
     st.markdown(interp(txt), unsafe_allow_html=True)
 
     l, r = st.columns([2, 3])
     with l:
         fig = go.Figure(go.Pie(labels=list(g.index.astype(str)), values=g["gasto"].values, hole=.55,
                                marker=dict(colors=[colors.get(str(a), "#999") for a in g.index]), texttemplate="%{percent:.1%}", textposition="inside", insidetextorientation="horizontal", sort=False))
-        style_fig(fig, 360, "Distribución del gasto por ámbito")
+        style_fig(fig, 360, "Distribución del gasto por " + ("servicio" if directo else "tipo de atención"))
         fig.update_layout(legend=dict(orientation="v", x=1.0, y=0.5, yanchor="middle"))
         st.plotly_chart(fig, **STRETCH)
-        st.markdown(interp("Cada porción es la parte del gasto de la IAFAS que corresponde a ese ámbito de atención."), unsafe_allow_html=True)
+        st.markdown(interp("Cada porción es la parte del gasto de la IAFAS que corresponde a ese " + ("servicio." if directo else "tipo de atención.")), unsafe_allow_html=True)
     with r:
         frq = st.radio("Periodo", ["Anual", "Trimestral", "Mensual"], horizontal=True, key=f"{name}_amb_f")
         rel = st.radio("Valores", ["Gasto (S/)", "% del total"], horizontal=True, key=f"{name}_amb_r")
@@ -1089,22 +1092,49 @@ def panel_ambito(d: pd.DataFrame, name: str, idx: pd.DatetimeIndex, o: Opts) -> 
         for a in wide.columns:
             fig.add_trace(go.Bar(x=wide.index, y=wide[a], name=a, marker_color=colors.get(a, "#999")))
         fig.update_layout(barmode="stack")
-        style_fig(fig, 360, "Evolución del gasto por ámbito", "%" if rel.startswith("%") else "S/")
+        style_fig(fig, 360, "Evolución del gasto por " + ("servicio" if directo else "tipo de atención"), "%" if rel.startswith("%") else "S/")
         if not rel.startswith("%"):
             fig.update_yaxes(tickprefix="S/ ", tickformat=",.0f")
         st.plotly_chart(fig, **STRETCH)
         if frq == "Anual":
             st.caption("2026 llega hasta agosto; usa «% del total» para comparar años incompletos.")
-        st.markdown(interp("Cómo se reparte el gasto entre ámbitos en cada periodo. Si una franja crece en «% del total», esa forma de atención gana peso en el gasto de la IAFAS."), unsafe_allow_html=True)
+        st.markdown(interp("Cómo se reparte el gasto entre categorías en cada periodo. Si una franja crece en «% del total», esa forma de atención gana peso en el gasto de la IAFAS."), unsafe_allow_html=True)
 
-    show = g.reset_index().rename(columns={col: "Ámbito", "gasto": "Gasto", "pct": "% del gasto", "lineas": "Líneas", "pacientes": "Pacientes"})
+    show = g.reset_index().rename(columns={col: "Servicio" if directo else "Tipo de atención", "gasto": "Gasto", "pct": "% del gasto", "lineas": "Líneas", "pacientes": "Pacientes"})
     show["S/ por paciente"] = np.where(show["Pacientes"] > 0, show["Gasto"] / show["Pacientes"].replace(0, np.nan), np.nan)
-    st.dataframe(fmt_df(show[["Ámbito", "Gasto", "% del gasto", "Pacientes", "S/ por paciente", "Líneas"]],
+    lbl_c = "Servicio" if directo else "Tipo de atención"
+    st.dataframe(fmt_df(show[[lbl_c, "Gasto", "% del gasto", "Pacientes", "S/ por paciente", "Líneas"]],
                         money=["Gasto", "S/ por paciente"], pcts=["% del gasto"], ints=["Pacientes", "Líneas"]), hide_index=True, **STRETCH)
     csv_button(show, "Descargar ámbitos (CSV)", f"ambito_{name}.csv", f"{name}_amb_csv")
     mx = show.sort_values("S/ por paciente", ascending=False).iloc[0]
-    st.markdown(interp(f"La tabla resume cada ámbito. El de mayor gasto por paciente es <b>{mx['Ámbito']}</b> ({soles_short(mx['S/ por paciente'])}). "
-                       "Un paciente puede aparecer en varios ámbitos, por lo que los pacientes de las filas no se suman."), unsafe_allow_html=True)
+    st.markdown(interp(f"La tabla resume cada categoría. La de mayor gasto por paciente es <b>{mx[lbl_c]}</b> ({soles_short(mx['S/ por paciente'])}). "
+                       "Un paciente puede aparecer en varias categorías, por lo que los pacientes de las filas no se suman."), unsafe_allow_html=True)
+
+    # servicio del tarifario x tipo de atención registrado (procedimientos)
+    prx = d[(d["tipo"] == "PROCEDIMIENTO") & (d["atencion"].astype(str) != ATENCION_SD)]
+    if not prx.empty and prx["atencion"].nunique() > 1:
+        st.markdown("#### Servicio del procedimiento según el tipo de atención registrado")
+        ct = prx.groupby(["ambito", "atencion"], observed=True)["gasto"].sum().unstack(fill_value=0)
+        ct = ct.reindex([a for a in AMBITO_DIRECTO if a in ct.index]).reindex(columns=[c_ for c_ in MACRO_ORDER if c_ in ct.columns]).fillna(0)
+        ctp = ct.div(ct.sum(axis=1).replace(0, np.nan), axis=0) * 100
+        fig = go.Figure()
+        for c_ in ctp.columns:
+            fig.add_trace(go.Bar(y=list(ctp.index)[::-1], x=ctp[c_][::-1], name=c_, orientation="h", marker_color=MACRO_COLOR.get(c_, "#999"),
+                                 text=[f"{v:,.0f}%" if v >= 7 else "" for v in ctp[c_][::-1]], textposition="inside",
+                                 customdata=ct[c_][::-1], hovertemplate="%{y}<br>" + c_ + ": %{x:,.1f}% (S/ %{customdata:,.0f})<extra></extra>"))
+        fig.update_layout(barmode="stack", hovermode="closest")
+        style_fig(fig, max(300, 34 * len(ctp) + 110), "Cada servicio del tarifario según el tipo de atención del paciente (% del gasto)")
+        fig.update_xaxes(ticksuffix="%", range=[0, 100])
+        fig.update_yaxes(automargin=True)
+        st.plotly_chart(fig, **STRETCH)
+        hx = ctp.get("Hospitalización", pd.Series(dtype=float))
+        msg = ""
+        if "Emergencia" in hx.index:
+            msg += f" En emergencia, {pct(hx['Emergencia'])} del gasto corresponde a pacientes registrados como hospitalizados."
+        if "Apoyo al diagnóstico" in hx.index:
+            msg += f" El apoyo al diagnóstico se factura en {pct(hx['Apoyo al diagnóstico'])} a pacientes hospitalizados."
+        st.markdown(interp("El servicio dice qué se hizo y el tipo de atención en qué condición estaba el paciente; no son lo mismo. "
+                           "Un examen de laboratorio puede pedirse en consulta o durante una hospitalización." + msg), unsafe_allow_html=True)
 
     # grupos del tarifario
     pr = d[d["tipo"] == "PROCEDIMIENTO"]
@@ -1125,10 +1155,10 @@ def panel_ambito(d: pd.DataFrame, name: str, idx: pd.DatetimeIndex, o: Opts) -> 
                                marker_color=[amb_col.get(str(a), "#999") for a in tg_["ambito"]][::-1],
                                text=[f"{soles_short(v)} ({q:,.1f}%)" for v, q in zip(tg_["gasto"][::-1], tg_["pct"][::-1])],
                                textposition="outside", cliponaxis=False, showlegend=False,
-                               customdata=tg_["ambito"][::-1], hovertemplate="%{y}<br>S/ %{x:,.0f}<br>Ámbito: %{customdata}<extra></extra>"))
+                               customdata=tg_["ambito"][::-1], hovertemplate="%{y}<br>S/ %{x:,.0f}<br>Servicio: %{customdata}<extra></extra>"))
         for a_ in dict.fromkeys(str(x) for x in tg_["ambito"]):
             fig.add_trace(go.Bar(x=[None], y=[None], name=a_, marker_color=amb_col.get(a_, "#999"), showlegend=True))
-        style_fig(fig, max(360, 28 * len(tg_) + 130), "Gasto en procedimientos por grupo del tarifario (color = ámbito asignado)")
+        style_fig(fig, max(360, 28 * len(tg_) + 130), "Gasto en procedimientos por grupo del tarifario (color = servicio asignado)")
         fig.update_layout(hovermode="closest", margin=dict(l=10, r=130, t=48, b=10))
         fig.update_xaxes(range=[0, float(tg_["gasto"].max()) * 1.3])
         fig.update_yaxes(automargin=True)
@@ -1136,16 +1166,16 @@ def panel_ambito(d: pd.DataFrame, name: str, idx: pd.DatetimeIndex, o: Opts) -> 
         l1 = gt.iloc[0]
         st.markdown(interp(
             f"Agrupa los procedimientos con las filas azules del tarifario INEN. <b>{l1['grupo_tarifario']}</b> es el grupo de mayor gasto ({pct(l1['pct'])} del gasto en procedimientos). "
-            "El color indica el ámbito de atención que se asignó a cada grupo."), unsafe_allow_html=True)
+            "El color indica el servicio que se asignó a cada grupo."), unsafe_allow_html=True)
         sh = gt.rename(columns={"grupo_tarifario": "Grupo del tarifario", "gasto": "Gasto", "pct": "% del gasto en procedimientos", "pacientes": "Pacientes",
-                                "lineas": "Líneas", "ambito": "Ámbito asignado"})
-        st.dataframe(fmt_df(sh[["Grupo del tarifario", "Ámbito asignado", "Gasto", "% del gasto en procedimientos", "Pacientes", "Líneas"]],
+                                "lineas": "Líneas", "ambito": "Servicio asignado"})
+        st.dataframe(fmt_df(sh[["Grupo del tarifario", "Servicio asignado", "Gasto", "% del gasto en procedimientos", "Pacientes", "Líneas"]],
                             money=["Gasto"], pcts=["% del gasto en procedimientos"], ints=["Pacientes", "Líneas"]), hide_index=True, height=300, **STRETCH)
         csv_button(sh, "Descargar grupos del tarifario (CSV)", f"grupos_tarifario_{name}.csv", f"{name}_gt_csv")
 
     # qué se consume en cada ámbito
-    st.markdown("#### Qué se consume en cada ámbito")
-    amb_sel = st.selectbox("Ámbito", [str(a) for a in g.index], key=f"{name}_amb_sel")
+    st.markdown("#### Qué se consume en cada " + ("servicio" if directo else "tipo de atención"))
+    amb_sel = st.selectbox("Servicio" if directo else "Tipo de atención", [str(a) for a in g.index], key=f"{name}_amb_sel")
     cat = st.radio("Mostrar", ["Medicamentos", "Insumos", "Procedimientos"], horizontal=True, key=f"{name}_amb_cat") if not directo else "Procedimientos"
     tp = {"Medicamentos": "MEDICAMENTO", "Insumos": "INSUMO", "Procedimientos": "PROCEDIMIENTO"}[cat]
     sub = dd[(dd[col] == amb_sel) & (dd["tipo"] == tp)]
@@ -1444,14 +1474,14 @@ def panel_tendencias(d: pd.DataFrame, name: str, idx: pd.DatetimeIndex, o: Opts)
     st.markdown("##### Tendencia por componente")
     cc1, cc2 = st.columns([3, 1.2])
     comp = cc1.radio("Componente", ["Tipo de consumo", "Diagnóstico (grupo)", "Medicamentos (principio activo)", "Insumos", "Procedimientos",
-                                    "Ámbito de atención"], horizontal=True, key=f"{name}_t_comp")
+                                    "Tipo de atención", "Estadío"], horizontal=True, key=f"{name}_t_comp")
     comp_met = cc2.selectbox("Métrica del componente", ["Gasto (S/)", "Pacientes activos"], key=f"{name}_t_cm")
     cm = METRICS[comp_met]
     by, base = {
         "Tipo de consumo": ("tipo", d), "Diagnóstico (grupo)": ("dx_grupo", d),
         "Medicamentos (principio activo)": ("principio_activo", d[d["tipo"] == "MEDICAMENTO"]),
         "Insumos": ("descripcion", d[d["tipo"] == "INSUMO"]), "Procedimientos": ("descripcion", d[d["tipo"] == "PROCEDIMIENTO"]),
-        "Ámbito de atención": ("ambito_macro", d),
+        "Tipo de atención": ("ambito_macro", d), "Estadío": ("estadio_grupo", d),
     }[comp]
     if by == "dx_grupo" and st.checkbox(f"Omitir «{SD_GROUP}»", value=False, key=f"{name}_t_sd"):
         base = base[base["dx_grupo"] != SD_GROUP]

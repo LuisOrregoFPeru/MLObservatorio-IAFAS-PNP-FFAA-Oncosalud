@@ -12,12 +12,13 @@ import pandas as pd
 import streamlit as st
 
 from data_processing import (
-    AMBITO_ORDER, EDAD_ORDER, SD_GROUP, TIPO_LABEL, TIPO_LIST, apply_filters, load_afiliados, load_fact, load_primas, month_index,
+    ATENCION_ORDER, ESTADIO_ORDER, VITAL_ORDER, EDAD_ORDER, SD_GROUP, TIPO_LABEL, TIPO_LIST, apply_filters, load_afiliados, load_fact, load_primas, month_index,
 )
 import panels as P
 import reco as R
 import asistente as A
 import proyecciones_comp as PC
+import desenlace as DS
 from ui import CSS, mes, num, STRETCH, Opts, fmt_df, interp, warn
 
 st.set_page_config(page_title="Observatorio del Consumo por IAFAS | INEN", page_icon="📊", layout="wide",
@@ -40,6 +41,8 @@ st.markdown(
 with st.sidebar:
     st.header("⚙️ Panel de control")
     asist_box = st.container()        # asistente de consultas: se llena cuando ya existen los filtros
+    st.divider()
+    st.markdown("**Filtros**")
     st.caption("Los filtros se aplican a todas las pestañas.")
 
     _meses = list(pd.date_range(MIN_M, MAX_M, freq="MS"))
@@ -48,8 +51,8 @@ with st.sidebar:
                             help=f"{mes(MAX_M)} puede estar incompleto por rezago de facturación.")
     tipos = st.multiselect("Tipo de consumo", TIPO_LIST, default=TIPO_LIST, format_func=lambda x: TIPO_LABEL[x])
 
-    amb_sel = st.multiselect("Ámbito de atención (vacío = todos)", [x for x in AMBITO_ORDER if x in set(fact["ambito"].astype(str))], default=[],
-                             help="Procedimientos: clasificación directa por código. Medicamentos e insumos: ámbito inferido por paciente-mes.")
+    aten_sel = st.multiselect("Tipo de atención (vacío = todos)", [x for x in ATENCION_ORDER if x in set(fact["atencion"].astype(str))], default=[],
+                              help="Dato registrado por el INEN en cada línea (campo TIPO_ATENCION): ambulatorio u hospitalizado.")
 
     st.divider()
     st.markdown("**Diagnóstico**")
@@ -57,6 +60,10 @@ with st.sidebar:
     dx_sel = st.multiselect("Grupo de diagnóstico (vacío = todos)", dx_all, default=[])
     excl_sd = st.checkbox("Excluir «Sin diagnóstico registrado»", value=False,
                           help="Son líneas sin código CIE-10 en el origen; concentran una parte grande del gasto.")
+    est_sel = st.multiselect("Estadío clínico (vacío = todos)", [x for x in ESTADIO_ORDER if x in set(fact["estadio_grupo"].astype(str))], default=[],
+                             help="Estadío registrado en la línea (DX_ESTADIO), agrupado: IIIb cuenta como III. «Desconocido» = registrado como desc.")
+    vit_sel = st.multiselect("Condición vital (vacío = todos)", VITAL_ORDER, default=[],
+                             help="Según la fecha de deceso de la extracción. Al filtrar se excluyen las líneas sin paciente identificado.")
     with st.expander("Filtros demográficos"):
         sexo_sel = st.multiselect("Sexo", sorted(fact["sexo"].unique().tolist()), default=[])
         edad_sel = st.multiselect("Grupo etario", [e for e in EDAD_ORDER if e in set(fact["edad_grupo"].unique())], default=[])
@@ -121,9 +128,10 @@ opts = Opts(
 )
 
 flt = apply_filters(fact, tipos=tipos or None, date_lo=date_lo, date_hi=date_hi, dx_grupos=dx_sel or None,
-                    sexo=sexo_sel or None, edad=edad_sel or None, deptos=dep_sel or None, excluir_sd=excl_sd, ambitos=amb_sel or None)
+                    sexo=sexo_sel or None, edad=edad_sel or None, deptos=dep_sel or None, excluir_sd=excl_sd,
+                    atencion=aten_sel or None, estadios=est_sel or None, vital=vit_sel or None)
 
-n_filters = sum(bool(x) for x in (dx_sel, sexo_sel, edad_sel, dep_sel, amb_sel)) + int(excl_sd) + int(len(tipos) < 3)
+n_filters = sum(bool(x) for x in (dx_sel, sexo_sel, edad_sel, dep_sel, aten_sel, est_sel, vit_sel)) + int(excl_sd) + int(len(tipos) < 3)
 st.caption(f"**Selección:** {mes(date_lo)} a {mes(date_hi)} · {len(tipos)} tipo(s) de consumo · "
            f"{'sin filtros adicionales' if n_filters == 0 else f'{n_filters} filtro(s) adicional(es) activo(s)'} · "
            f"{len(flt):,} registros agregados")
@@ -148,7 +156,7 @@ choice = st.segmented_control("Pestañas", NAV, default="Comparativo", key="nav"
 choice = choice or "Comparativo"
 st.divider()
 
-SECTIONS = ["📌 Resumen e ingreso", "🏥 Ámbito de atención", "🩺 Diagnósticos", "💊 Medicamentos", "🧰 Insumos", "🔬 Procedimientos",
+SECTIONS = ["📌 Resumen e ingreso", "🏥 Tipo de atención", "🩺 Diagnósticos", "🎗️ Estadío y desenlace", "💊 Medicamentos", "🧰 Insumos", "🔬 Procedimientos",
             "💰 Gasto y evolución", "📈 Tendencias", "🔮 Proyecciones", "🧭 Recomendaciones"]
 
 if choice == "Comparativo":
@@ -201,26 +209,29 @@ elif choice in IAFAS_TABS:
     with tabs[2]:
         P.panel_diagnosticos(d_i, choice, idx, opts, d_r)
     with tabs[3]:
-        P.panel_items(d_i, d_r, choice, "MEDICAMENTO", idx, opts)
+        DS.panel_desenlace(d_i, choice, opts, d_r)
     with tabs[4]:
-        P.panel_items(d_i, d_r, choice, "INSUMO", idx, opts)
+        P.panel_items(d_i, d_r, choice, "MEDICAMENTO", idx, opts)
     with tabs[5]:
-        P.panel_items(d_i, d_r, choice, "PROCEDIMIENTO", idx, opts)
+        P.panel_items(d_i, d_r, choice, "INSUMO", idx, opts)
     with tabs[6]:
-        P.panel_gasto(d_i, choice, idx, opts)
+        P.panel_items(d_i, d_r, choice, "PROCEDIMIENTO", idx, opts)
     with tabs[7]:
-        P.panel_tendencias(d_i, choice, idx, opts)
+        P.panel_gasto(d_i, choice, idx, opts)
     with tabs[8]:
+        P.panel_tendencias(d_i, choice, idx, opts)
+    with tabs[9]:
         P.panel_proyecciones(d_i, choice, idx, opts)
         PC.panel_componentes(d_i, choice, idx, opts)
-    with tabs[9]:
+    with tabs[10]:
         R.panel_recomendaciones(d_i, d_r, choice, idx, opts)
 
 elif choice == "Tabla dinámica":
     st.subheader("Tabla dinámica y descarga")
     dims = {"IAFAS": "iafas", "Año": "anio", "Mes": "tiempo", "Tipo de consumo": "tipo", "Grupo de diagnóstico": "dx_grupo",
             "Diagnóstico (CIE-10)": "dx_etiqueta", "Ítem (descripción)": "descripcion", "Principio activo": "principio_activo",
-            "Ámbito de atención": "ambito", "Grupo del tarifario": "grupo_tarifario", "Sexo": "sexo", "Grupo etario": "edad_grupo", "Departamento": "departamento"}
+            "Tipo de atención": "atencion", "Servicio del procedimiento (tarifario)": "ambito", "Estadío (agrupado)": "estadio_grupo",
+            "Estadío (detalle)": "estadio", "Condición vital": "condicion_vital", "Grupo del tarifario": "grupo_tarifario", "Sexo": "sexo", "Grupo etario": "edad_grupo", "Departamento": "departamento"}
     c = st.columns([2, 2, 1.2, 1.2])
     rows = c[0].multiselect("Filas", list(dims), default=["IAFAS", "Año"])
     cols = c[1].multiselect("Columnas (opcional)", [x for x in dims if x not in rows], default=[])
@@ -288,15 +299,18 @@ empezaron antes de ene-2019 o siguen en tratamiento); la opción «Solo paciente
 **Medicamentos de alto costo.** Se marcan con la lista nominal no PNUME (`data/alto_costo.csv`, tomada del listado al 22.09.26): coincidencia por código SIGA y, opcionalmente,
 otras presentaciones de la misma molécula. El precio referencial es el de adjudicación del listado (los marcadores de S/ 0.90 no se comparan).
 
-**Ámbito de atención.** Cada procedimiento se asigna al grupo del Tarifario INEN 2026 al que pertenece su código (`COD_ITEM` = código INEN; 53 grupos tomados de las filas
-azules de agrupamiento, `data/tarifario_inen.csv`, 97.7% del gasto en procedimientos queda con grupo). El ámbito sale de ese grupo: consulta externa (consulta externa, telesalud,
-odontología, oftalmología, estrategia sanitaria), apoyo al diagnóstico (laboratorios, equipos funcionales de imágenes, patología, medicina nuclear, tomas de muestra, cardiología, neumología
-y neurología diagnósticas), quimioterapia y radioterapia, emergencia (medicina crítica), hospitalización (hospitalización y sus procedimientos), centro quirúrgico (cirugía, anestesia,
-procedimientos vasculares) y procedimientos y terapias ambulatorias (enfermería, transfusiones, procedimientos médicos y especiales). Los códigos sin grupo en el tarifario se clasifican por prefijo del código.
-Esto corrigió la clasificación previa por prefijo: las inyecciones e infusiones de enfermería ya no cuentan como consulta externa y las transfusiones ya no cuentan como apoyo al diagnóstico.
-Medicamentos e insumos no traen ámbito: se infieren del paciente en el mes (hospitalización, emergencia, centro quirúrgico o ambulatorio, en ese orden de prioridad).
-Las fechas de atención no vienen en la extracción (solo año y mes), así que no se puede afinar por día. «Sin procedimiento asociado» son fármacos o insumos de un
-paciente sin procedimientos facturados ese mes (o sin DNI).
+**Tipo de atención.** Desde la versión V02 de la extracción cada línea trae el tipo de atención registrado por el INEN (`TIPO_ATENCION`: ambulatorio u hospitalizado),
+que es el que se usa en todo el observatorio. Reemplaza la inferencia anterior, que asignaba a medicamentos e insumos el ámbito de los procedimientos del mismo paciente en el mes
+(esa inferencia coincidía con el dato real en 86.7% del gasto en fármacos e insumos). Las líneas sin paciente identificado no traen el campo y figuran como «Sin dato».
+Para procedimientos se conserva además el **servicio del tarifario**: cada código se asigna al grupo del Tarifario INEN 2026 al que pertenece (`data/tarifario_inen.csv`, 53 grupos)
+y de ahí a consulta externa, apoyo al diagnóstico, quimioterapia y radioterapia, emergencia, hospitalización, centro quirúrgico o procedimientos y terapias ambulatorias
+(los códigos sin grupo se clasifican por prefijo). El servicio describe qué se hizo; el tipo de atención, en qué condición estaba el paciente.
+
+**Estadío y desenlace vital.** `DX_ESTADIO` se agrupa en 0, I, II, III y IV (IIIb cuenta como III; I-E como I); «desc» se muestra como «Desconocido». El estadío del paciente es el más
+frecuente en las líneas de su diagnóstico de mayor gasto. `FEC_DECESO` se guarda solo como mes. La fecha de corte del estado vital es la fecha de deceso más reciente de la extracción;
+quien no tiene fecha de deceso se considera vivo a esa fecha, lo que puede subestimar la mortalidad si hay fallecimientos no registrados. La supervivencia (Kaplan-Meier) se mide
+desde el primer mes financiado por la IAFAS en la serie, no desde el diagnóstico: los pacientes que ya se trataban antes de 2019 entran tarde y la curva no equivale a la supervivencia por estadío
+de un registro de cáncer.
 
 **Líneas repetidas.** Las líneas de medicamentos e insumos nunca se repiten; en procedimientos, la mitad son filas idénticas porque la
 extracción no trae un identificador de línea (p. ej. sesiones de radioterapia o análisis repetidos el mismo día). Se conservan,
