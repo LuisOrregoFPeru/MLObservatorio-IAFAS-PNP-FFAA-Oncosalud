@@ -648,8 +648,13 @@ def _cb_enviar():
     st.session_state.pop("asist_sug", None)
 
 
+def _cb_cerrar():
+    st.session_state["asist_visible"] = False
+
+
 def _cb_limpiar():
     st.session_state["asist_hist"] = []
+    st.session_state["asist_visible"] = False
     st.session_state["asist_q"] = ""
     st.session_state.pop("asist_sug", None)
 
@@ -711,7 +716,7 @@ def _panel_evaluacion(base: pd.DataFrame, q: str, key: str | None):
 
 
 def render(df_filtrado: pd.DataFrame, df_total: pd.DataFrame):
-    """Dibuja el asistente. Debe llamarse dentro del contexto de la barra lateral."""
+    """Dibuja los controles del asistente en la barra lateral. El resultado lo dibuja render_resultado()."""
     st.session_state.setdefault("asist_hist", [])
     st.session_state.setdefault("asist_q", "")
     with st.expander("💬 Pregunta a los datos", expanded=True):
@@ -743,36 +748,13 @@ def render(df_filtrado: pd.DataFrame, df_total: pd.DataFrame):
                 except Exception as e:  # noqa: BLE001
                     a, tb, spec, modo = f"No se pudo completar la consulta: {e}", pd.DataFrame(), None, "error"
             st.session_state["asist_hist"].append({"q": pregunta, "a": a, "tabla": tb, "spec": spec, "modo": modo})
+            st.session_state["asist_visible"] = True
 
-        if not st.session_state["asist_hist"] and not q_actual:
-            st.markdown("<div class='asist-ej-tit'>Ejemplos de preguntas (tócalos para consultar)</div>", unsafe_allow_html=True)
-            with _caja("asist_ejs"):
-                for i, ej in enumerate(EJEMPLOS):
-                    st.button(ej, key=f"asist_ej_{i}", on_click=_cb_ejemplo, args=(ej,), **_BTN_TEXTO)
-
-        hist = st.session_state["asist_hist"]
-        if hist:
-            i = len(hist) - 1
-            h = hist[i]
-            st.markdown(f"<div class='asist-q'>🧑 {h['q']}</div>", unsafe_allow_html=True)
-            st.markdown(h["a"])
-            if h["tabla"] is not None and not h["tabla"].empty:
-                _grafico(h["tabla"])
-                _tabla(h["tabla"].head(10))
-                if st.button("🔍 Ampliar y descargar", key="asist_amp", **STRETCH):
-                    _ampliar(i)
-            if h.get("spec"):
-                with st.popover("Cómo se calculó", **STRETCH):
-                    st.json(h["spec"], expanded=True)
-            if len(hist) > 1:
-                with st.popover(f"Historial ({len(hist) - 1})", **STRETCH):
-                    for j in range(len(hist) - 2, -1, -1):
-                        st.markdown(f"**{hist[j]['q']}**")
-                        st.markdown(hist[j]["a"])
-                        st.divider()
-            with st.popover("Ejemplos de preguntas", **STRETCH), _caja("asist_ejs2"):
-                for k, ej in enumerate(EJEMPLOS):
-                    st.button(ej, key=f"asist_ej2_{k}", on_click=_cb_ejemplo, args=(ej,), **_BTN_TEXTO)
+        st.markdown("<div class='asist-ej-tit'>Ejemplos de preguntas (tócalos para consultar)</div>", unsafe_allow_html=True)
+        with _caja("asist_ejs"):
+            for i, ej in enumerate(EJEMPLOS):
+                st.button(ej, key=f"asist_ej_{i}", on_click=_cb_ejemplo, args=(ej,), **_BTN_TEXTO)
+        st.caption("El resultado se muestra en la sección principal, arriba de las pestañas.")
 
         st.caption(("🟢 Modo IA activo (Claude). " if key else "⚪ Modo básico por reglas. ")
                    + "Las cifras salen de agregaciones sobre los datos del observatorio; al modelo solo se envían tablas resumidas, sin identificadores.")
@@ -780,3 +762,42 @@ def render(df_filtrado: pd.DataFrame, df_total: pd.DataFrame):
             with st.popover("Activar modo IA", **STRETCH):
                 st.text_input("Clave de API de Anthropic", type="password", key="asist_key",
                               help="Se guarda solo en esta sesión. En Streamlit Cloud, colócala en Secrets como ANTHROPIC_API_KEY.")
+
+
+def render_resultado():
+    """Muestra la última respuesta en la sección principal (llamar después de render())."""
+    hist = st.session_state.get("asist_hist") or []
+    if not hist or not st.session_state.get("asist_visible", False):
+        return
+    i = len(hist) - 1
+    h = hist[i]
+    tb = h["tabla"]
+    hay_tabla = tb is not None and not tb.empty
+    with st.container(border=True):
+        c_q, c_x = st.columns([30, 1], vertical_alignment="center")
+        c_q.markdown(f"<div class='asist-q'>💬 {h['q']}</div>", unsafe_allow_html=True)
+        c_x.button("✕", key="asist_close", on_click=_cb_cerrar, help="Cerrar")
+        if hay_tabla:
+            c_txt, c_fig = st.columns([1, 1.15], gap="large")
+            with c_txt:
+                st.markdown(h["a"])
+            with c_fig:
+                _grafico(tb, 300)
+            with st.expander(f"Tabla de resultados ({len(tb)} filas)"):
+                _tabla(tb)
+        else:
+            st.markdown(h["a"])
+        b1, b2, b3 = st.columns(3)
+        if hay_tabla:
+            b1.download_button("⬇️ Descargar CSV", tb.to_csv(index=False).encode("utf-8-sig"),
+                               file_name="consulta_asistente_iafas.csv", mime="text/csv", key="asist_dl_main", **STRETCH)
+        if h.get("spec"):
+            with b2.popover("Cómo se calculó", **STRETCH):
+                st.json(h["spec"], expanded=True)
+        with b3.popover(f"Historial ({len(hist) - 1})", **STRETCH):
+            if len(hist) == 1:
+                st.caption("Aún no hay consultas anteriores.")
+            for j in range(len(hist) - 2, -1, -1):
+                st.markdown(f"**{hist[j]['q']}**")
+                st.markdown(hist[j]["a"])
+                st.divider()

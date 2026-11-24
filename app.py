@@ -138,6 +138,7 @@ st.caption(f"**Selección:** {mes(date_lo)} a {mes(date_hi)} · {len(tipos)} tip
 
 with st.sidebar, asist_box:
     A.render(flt, fact)
+A.render_resultado()     # respuesta de "Pregunta a los datos" en la sección principal
 
 if flt.empty:
     st.warning("La selección no devuelve datos. Amplía el rango o quita filtros.")

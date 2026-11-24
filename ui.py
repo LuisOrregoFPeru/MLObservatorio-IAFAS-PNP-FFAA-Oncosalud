@@ -67,6 +67,8 @@ CSS = f"""
     .asist-ej-tit {{ font-size: .78rem; color: #6b7280; margin: .5rem 0 0 0; }}
     button[kind="tertiary"] {{ justify-content: flex-start; text-align: left; padding: .1rem 0; min-height: 0; }}
     button[kind="tertiary"] p {{ font-size: .82rem; color: {PRIMARY}; font-style: italic; }}
+    .st-key-asist_close {{ display: flex; justify-content: flex-end; }}
+    .st-key-asist_close button {{ min-height: 2.1rem; width: 2.3rem; padding: 0; font-size: 1.05rem; }}
     .asist-q {{ background: #eef3f9; border-radius: 8px; padding: .45rem .7rem; margin: .4rem 0 .3rem 0; font-size: .88rem; color: {ACCENT}; font-weight: 600; }}
 </style>
 """
