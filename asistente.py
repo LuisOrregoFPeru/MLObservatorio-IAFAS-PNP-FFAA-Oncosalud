@@ -436,38 +436,41 @@ def interpretar(df: pd.DataFrame, q: str) -> dict:
 
 
 def describir(tb: pd.DataFrame, rs: dict) -> str:
-    met = rs["metrica"]
-    tot = rs["total"].get(met, np.nan)
-    partes = [f"**{METRICS[met]}** · {rs['periodo']}"]
-    if rs["filtros"]:
-        partes.append("Filtros: " + "; ".join(rs["filtros"]) + ".")
+    """Respuesta breve en lenguaje sencillo: un título y una o dos frases."""
     if rs["registros"] == 0:
         return "No hay registros con esos criterios. Prueba con menos filtros o revisa los del panel."
-    if met != "pacientes" or tb.empty:
-        partes.append(f"Total: **{_fmt_val(tot, met)}** ({num(rs['total']['pacientes'])} pacientes únicos).")
+    met = rs["metrica"]
+    tot = rs["total"].get(met, np.nan)
+    flt = [f.split(": ", 1)[-1] for f in rs["filtros"] if not re.match(r"(desde|hasta)\b", f)]
+    titulo = " · ".join([METRICS[met]] + flt + [rs["periodo"]])
+    npac = num(rs["total"]["pacientes"])
+    if met == "pacientes":
+        frases = [f"En total se atendieron **{num(tot)}** pacientes únicos."]
     else:
-        partes.append(f"Total: **{num(tot)}** pacientes únicos (no se suman entre filas).")
-    if not tb.empty:
-        first, vcol = tb.iloc[0], tb.columns[len([c for c in tb.columns if c in DIM_LABEL.values()])]
-        dcols = [c for c in tb.columns if c in DIM_LABEL.values()]
-        if dcols and not any(c in ("Año", "Mes") for c in dcols):
+        frases = [f"El total es **{_fmt_val(tot, met)}**, en {npac} pacientes."]
+    dcols = [c for c in tb.columns if c in DIM_LABEL.values()] if not tb.empty else []
+    if dcols:
+        vcol = tb.columns[len(dcols)]
+        if not any(c in ("Año", "Mes") for c in dcols):
+            first = tb.iloc[0]
             lbl = " · ".join(str(first[c]) for c in dcols)
             extra = f" ({num(first['% del total'], 1)}% del total)" if "% del total" in tb.columns else ""
-            partes.append(f"Primer lugar: **{lbl}** con {_fmt_val(first[vcol], met)}{extra}.")
-        elif dcols and len(tb) >= 2 and dcols == ["Año"]:
+            frases.append(f"El primer lugar es **{lbl}**, con {_fmt_val(first[vcol], met)}{extra}.")
+        elif dcols == ["Año"] and len(tb) >= 2:
             a, b = tb.iloc[-2], tb.iloc[-1]
             um = rs.get("ultimo_mes")
-            parcial = um is not None and int(b["Año"]) == um.year and um.month < 12
-            if parcial and len(tb) >= 3:
-                a, b = tb.iloc[-3], tb.iloc[-2]
-                partes.append(f"{int(tb.iloc[-1]['Año'])} es un año incompleto (hasta {mes(um)}); se comparan los dos últimos años completos.")
-                parcial = False
+            nota = ""
+            if um is not None and int(b["Año"]) == um.year and um.month < 12:
+                if len(tb) >= 3:
+                    a, b = tb.iloc[-3], tb.iloc[-2]
+                    nota = f" ({um.year} aún está incompleto, hasta {mes(um)})"
+                else:
+                    nota = " (el último año está incompleto)"
             if a[vcol]:
                 var = (b[vcol] / a[vcol] - 1) * 100
-                partes.append(f"Entre {int(a['Año'])} y {int(b['Año'])} la variación es de {num(var, 1)}%"
-                              + (" (el último año está incompleto)." if parcial else "."))
-    partes.append("_Modo básico: para preguntas libres activa el modo IA con una clave de Anthropic._")
-    return "  \n".join(partes)
+                verbo = "subió" if var >= 0 else "bajó"
+                frases.append(f"Entre {int(a['Año'])} y {int(b['Año'])} {verbo} {num(abs(var), 1)}%{nota}.")
+    return f"**{titulo}**  \n" + " ".join(frases)
 
 
 # ---------------------------------------------------------------------------
